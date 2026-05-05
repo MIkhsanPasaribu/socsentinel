@@ -1,6 +1,6 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /** SOCsentinel — Reports feature — Investigation Reports view. */
 
-import { useQuery } from "@tanstack/react-query";
 import {
   FileText,
   Shield,
@@ -10,15 +10,16 @@ import {
   ChevronUp,
   Clock,
   CheckCircle2,
+  Zap,
 } from "lucide-react";
 import { useState } from "react";
-import { apiClient } from "../../../shared/lib/api";
 import {
   getSeverityBadgeClass,
   formatRelativeTime,
   formatConfidence,
 } from "../../../shared/lib/utils";
-import type { APIResponse, Investigation } from "../../../shared/types";
+import { useInvestigationsFull } from "../../../shared/hooks/useInvestigations";
+import type { Investigation } from "../../../shared/types";
 
 function ReportCard({ investigation }: { investigation: Investigation }) {
   const [expanded, setExpanded] = useState(false);
@@ -26,6 +27,7 @@ function ReportCard({ investigation }: { investigation: Investigation }) {
   const mitre = investigation.mitre_result;
   const triage = investigation.triage_result;
   const evidence = investigation.evidence_result;
+  const response = investigation.response_result;
 
   return (
     <div className="glass-card animate-slide-up overflow-hidden transition-all">
@@ -188,6 +190,45 @@ function ReportCard({ investigation }: { investigation: Investigation }) {
               </ul>
             </div>
           )}
+
+          {/* Response Playbook */}
+          {response && response.steps && response.steps.length > 0 && (
+            <div>
+              <h4 className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-emerald-400">
+                <Zap size={14} /> Containment Playbook
+              </h4>
+              <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/5 p-3">
+                <div className="mb-3 flex items-center justify-between">
+                  <span className="text-sm font-semibold text-emerald-400">
+                    {response.playbook_name || "Response Playbook"}
+                  </span>
+                  <span className="rounded bg-emerald-500/20 px-2 py-0.5 text-[10px] font-medium uppercase text-emerald-400">
+                    {response.priority || "Standard"} Priority
+                  </span>
+                </div>
+                
+                <div className="space-y-2">
+                  {response.steps.map((step: any, i: number) => (
+                    <div key={i} className="flex gap-3 rounded-md bg-white/5 p-2">
+                      <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-500/20 text-[10px] font-bold text-emerald-400">
+                        {step.order || i + 1}
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-white">{step.action}</p>
+                        <div className="mt-1 flex items-center gap-2 text-[10px] text-gray-400">
+                          <span className="font-mono bg-white/10 px-1 rounded">{step.tool}</span>
+                          <span className={step.risk_level === "high" ? "text-red-400" : step.risk_level === "medium" ? "text-orange-400" : "text-green-400"}>
+                            Risk: {step.risk_level}
+                          </span>
+                          {step.automated && <span className="text-cyan-400">Automated</span>}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -195,31 +236,7 @@ function ReportCard({ investigation }: { investigation: Investigation }) {
 }
 
 export function ReportsView() {
-  const { data: investigations, isLoading } = useQuery<Investigation[]>({
-    queryKey: ["investigations-full"],
-    queryFn: async () => {
-      const res = await apiClient.get<APIResponse<Investigation[]>>("/pipeline/list");
-      const summaries = (res.data.data as Investigation[]) || [];
-
-      // Fetch full data for each completed investigation
-      const full = await Promise.all(
-        summaries
-          .filter((s) => s.status === "completed")
-          .map(async (s) => {
-            try {
-              const detail = await apiClient.get<APIResponse<Investigation>>(
-                `/pipeline/status/${s.investigation_id}`
-              );
-              return detail.data.data as Investigation;
-            } catch {
-              return s;
-            }
-          })
-      );
-      return full;
-    },
-    refetchInterval: 15_000,
-  });
+  const { data: investigations, isLoading } = useInvestigationsFull();
 
   return (
     <div className="space-y-6">
