@@ -1,6 +1,5 @@
 /** SOCsentinel — Audit Trail feature — Timeline Audit Log view. */
 
-import { useQuery } from "@tanstack/react-query";
 import {
   ClipboardList,
   Clock,
@@ -10,9 +9,8 @@ import {
   Filter,
 } from "lucide-react";
 import { useState, useMemo } from "react";
-import { apiClient } from "../../../shared/lib/api";
 import { formatRelativeTime } from "../../../shared/lib/utils";
-import type { APIResponse, Investigation } from "../../../shared/types";
+import { useInvestigationsFull } from "../../../shared/hooks/useInvestigations";
 
 interface AuditEntry {
   timestamp: string;
@@ -32,6 +30,9 @@ const agentColors: Record<string, string> = {
   "Evidence Collector": "text-purple-400 bg-purple-500/10 border-purple-500/30",
   "MITRE Mapper": "text-red-400 bg-red-500/10 border-red-500/30",
   "Report Writer": "text-amber-400 bg-amber-500/10 border-amber-500/30",
+  "Response Planner": "text-emerald-400 bg-emerald-500/10 border-emerald-500/30",
+  "Escalation Engine": "text-orange-400 bg-orange-500/10 border-orange-500/30",
+  "Human Analyst": "text-cyan-400 bg-cyan-500/10 border-cyan-500/30",
 };
 
 function AuditEntryRow({ entry }: { entry: AuditEntry }) {
@@ -62,7 +63,7 @@ function AuditEntryRow({ entry }: { entry: AuditEntry }) {
       {/* Timing */}
       <div className="flex items-center gap-1 text-xs text-gray-400">
         <Clock size={12} />
-        <span>{entry.processing_time_ms.toFixed(1)}ms</span>
+        <span>{entry.processing_time_ms != null ? `${entry.processing_time_ms.toFixed(1)}ms` : "—"}</span>
       </div>
 
       {/* Confidence */}
@@ -97,28 +98,7 @@ function AuditEntryRow({ entry }: { entry: AuditEntry }) {
 export function AuditTrailView() {
   const [agentFilter, setAgentFilter] = useState<string>("all");
 
-  const { data: investigations, isLoading } = useQuery<Investigation[]>({
-    queryKey: ["investigations-audit"],
-    queryFn: async () => {
-      const res = await apiClient.get<APIResponse<Investigation[]>>("/pipeline/list");
-      const summaries = (res.data.data as Investigation[]) || [];
-
-      const full = await Promise.all(
-        summaries.map(async (s) => {
-          try {
-            const detail = await apiClient.get<APIResponse<Investigation>>(
-              `/pipeline/status/${s.investigation_id}`
-            );
-            return detail.data.data as Investigation;
-          } catch {
-            return s;
-          }
-        })
-      );
-      return full;
-    },
-    refetchInterval: 10_000,
-  });
+  const { data: investigations, isLoading } = useInvestigationsFull(10_000);
 
   /** Flatten all audit trail entries across investigations. */
   const allEntries = useMemo(() => {
@@ -145,7 +125,7 @@ export function AuditTrailView() {
     return allEntries.filter((e) => e.agent === agentFilter);
   }, [allEntries, agentFilter]);
 
-  const agents = ["all", "Orchestrator", "L1 Triage", "Evidence Collector", "MITRE Mapper", "Report Writer"];
+  const agents = ["all", "Orchestrator", "L1 Triage", "Evidence Collector", "MITRE Mapper", "Report Writer", "Response Planner", "Escalation Engine", "Human Analyst"];
 
   return (
     <div className="space-y-6">
