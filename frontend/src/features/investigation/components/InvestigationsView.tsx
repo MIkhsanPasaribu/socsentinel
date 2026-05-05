@@ -1,7 +1,7 @@
-/** SOCsentinel — Investigation feature — Pipeline results view. */
+/** SOCsentinel — Investigation feature — Real-time SSE pipeline viewer. */
 
 import { useState } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import {
   Search,
   CheckCircle2,
@@ -9,69 +9,119 @@ import {
   Clock,
   Shield,
   Brain,
-  ChevronRight,
+  Eye,
   FileText,
   Target,
-  Eye,
+  Zap,
+  Loader2,
+  AlertTriangle,
 } from "lucide-react";
 import { apiClient } from "../../../shared/lib/api";
-import { cn, formatConfidence } from "../../../shared/lib/utils";
-import type { APIResponse, Investigation, InvestigationSummary } from "../../../shared/types";
+import { cn, getSeverityBadgeClass } from "../../../shared/lib/utils";
+import { ConfidenceBar } from "../../../shared/components/ConfidenceGauge";
+import { DecisionPanel } from "./DecisionPanel";
+import { useSSEInvestigation, type AgentStep } from "../hooks/useSSEInvestigation";
+import { env } from "../../../core/config/env";
+import type { APIResponse, InvestigationSummary } from "../../../shared/types";
 
-function AgentStepCard({
-  step,
-  data,
-  isActive,
-  onClick,
-}: {
-  step: string;
-  data: Record<string, unknown> | null;
-  isActive: boolean;
-  onClick: () => void;
-}) {
-  const agentIcons: Record<string, typeof Brain> = {
+/** Agent step visualization for the SSE pipeline. */
+function AgentStepRow({ agent }: { agent: AgentStep }) {
+  const icons: Record<string, typeof Brain> = {
     orchestrator: Shield,
     l1_triage: Eye,
     evidence_collector: Search,
     mitre_mapper: Target,
     report_writer: FileText,
   };
-  const Icon = agentIcons[step] || Brain;
-  const agentName = (data as Record<string, unknown>)?._agent as string || step;
-  const confidence = (data as Record<string, unknown>)?.confidence as number;
-  const timeMs = (data as Record<string, unknown>)?._processing_time_ms as number;
+  const Icon = icons[agent.step] || Brain;
+
+  const statusStyles = {
+    pending: {
+      border: "border-white/10",
+      bg: "bg-white/[0.02]",
+      iconBg: "bg-white/5",
+      iconColor: "text-gray-600",
+      label: "Pending",
+      labelColor: "text-gray-600",
+    },
+    running: {
+      border: "border-cyan-500/40 glow-cyan",
+      bg: "bg-cyan-500/5",
+      iconBg: "bg-cyan-500/10",
+      iconColor: "text-cyan-400 animate-pulse",
+      label: "Processing...",
+      labelColor: "text-cyan-400",
+    },
+    completed: {
+      border: "border-green-500/30",
+      bg: "bg-green-500/5",
+      iconBg: "bg-green-500/10",
+      iconColor: "text-green-400",
+      label: "Completed",
+      labelColor: "text-green-400",
+    },
+  };
+
+  const s = statusStyles[agent.status];
 
   return (
-    <button
-      onClick={onClick}
+    <div
       className={cn(
-        "flex w-full items-center gap-3 rounded-lg border p-3 text-left transition-all",
-        isActive
-          ? "border-cyan-500/40 bg-cyan-500/10"
-          : data
-            ? "border-green-500/20 bg-green-500/5 hover:border-green-500/30"
-            : "border-white/10 bg-white/5 opacity-50"
+        "flex items-center gap-4 rounded-xl border px-4 py-3 transition-all duration-500",
+        s.border,
+        s.bg
       )}
     >
-      <div className={cn("rounded-lg p-2", data ? "bg-green-500/10" : "bg-white/5")}>
-        <Icon size={16} className={data ? "text-green-400" : "text-gray-500"} />
+      {/* Icon */}
+      <div className={cn("rounded-lg p-2.5", s.iconBg)}>
+        <Icon size={18} className={s.iconColor} />
       </div>
+
+      {/* Agent info */}
       <div className="flex-1">
-        <p className="text-xs font-semibold text-white">{agentName}</p>
-        <div className="flex gap-3 text-[10px] text-gray-500">
-          {confidence != null && <span>Confidence: {formatConfidence(confidence)}</span>}
-          {timeMs != null && <span>{timeMs.toFixed(1)}ms</span>}
+        <div className="flex items-center gap-2">
+          <p className="text-sm font-semibold text-white">{agent.name}</p>
+          <span className="rounded-md bg-white/5 px-1.5 py-0.5 font-mono text-[9px] text-gray-500">
+            {agent.model}
+          </span>
+        </div>
+        <p className="text-xs text-gray-500">{agent.role}</p>
+      </div>
+
+      {/* Status */}
+      <div className="flex items-center gap-3">
+        {agent.status === "running" && (
+          <Loader2 size={14} className="animate-spin text-cyan-400" />
+        )}
+        {agent.status === "completed" && agent.confidence != null && (
+          <ConfidenceBar score={agent.confidence} />
+        )}
+        {agent.status === "completed" && agent.processing_time_ms != null && (
+          <span className="flex items-center gap-1 text-xs text-gray-400">
+            <Clock size={12} />
+            {agent.processing_time_ms.toFixed(0)}ms
+          </span>
+        )}
+        <div className="flex items-center gap-1.5">
+          {agent.status === "completed" ? (
+            <CheckCircle2 size={14} className="text-green-400" />
+          ) : agent.status === "running" ? (
+            <span className="agent-active" />
+          ) : (
+            <span className="h-2 w-2 rounded-full bg-gray-700" />
+          )}
+          <span className={cn("text-xs font-medium", s.labelColor)}>
+            {s.label}
+          </span>
         </div>
       </div>
-      {data && <CheckCircle2 size={14} className="text-green-400" />}
-      <ChevronRight size={14} className="text-gray-500" />
-    </button>
+    </div>
   );
 }
 
 export function InvestigationsView() {
-  const [selectedInv, setSelectedInv] = useState<Investigation | null>(null);
-  const [activeStep, setActiveStep] = useState<string>("orchestrator");
+  const { state: sseState, startInvestigation, reset } = useSSEInvestigation(env.apiUrl);
+  const [selectedScenario, setSelectedScenario] = useState("brute_force");
 
   const { data: listData } = useQuery({
     queryKey: ["investigations"],
@@ -80,84 +130,174 @@ export function InvestigationsView() {
   });
 
   const investigations = (listData?.data?.data as InvestigationSummary[]) || [];
+  const completedCount = sseState.agents.filter((a) => a.status === "completed").length;
+  const avgConfidence =
+    sseState.agents
+      .filter((a) => a.confidence != null)
+      .reduce((sum, a) => sum + (a.confidence || 0), 0) /
+      (sseState.agents.filter((a) => a.confidence != null).length || 1) || null;
 
-  const demoMutation = useMutation({
-    mutationFn: (scenario: string) =>
-      apiClient.post<APIResponse<Investigation>>(`/pipeline/investigate-demo?scenario=${scenario}`),
-    onSuccess: (res) => {
-      if (res.data.data) setSelectedInv(res.data.data as Investigation);
-    },
-  });
-
-  const steps = [
-    { key: "orchestrator", dataKey: "orchestrator_result" },
-    { key: "l1_triage", dataKey: "triage_result" },
-    { key: "evidence_collector", dataKey: "evidence_result" },
-    { key: "mitre_mapper", dataKey: "mitre_result" },
-    { key: "report_writer", dataKey: "report_result" },
-  ] as const;
-
-  const activeData = selectedInv
-    ? (selectedInv[steps.find((s) => s.key === activeStep)?.dataKey || "orchestrator_result"] as Record<string, unknown>)
-    : null;
+  const scenarios = ["brute_force", "lateral_movement", "data_exfiltration", "phishing", "ransomware"];
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-white">Investigations</h1>
-          <p className="mt-1 text-sm text-gray-400">Multi-agent pipeline results and analysis</p>
+          <p className="mt-1 text-sm text-gray-400">
+            Real-time multi-agent pipeline with SSE streaming
+          </p>
         </div>
-        <button
-          onClick={() => demoMutation.mutate("brute_force")}
-          disabled={demoMutation.isPending}
-          className="flex items-center gap-2 rounded-lg bg-gradient-to-r from-cyan-500 to-blue-600 px-4 py-2 text-sm font-medium text-white transition-all hover:shadow-lg hover:shadow-cyan-500/25 disabled:opacity-50"
-        >
-          {demoMutation.isPending ? (
-            <><Clock size={16} className="animate-spin" /> Running...</>
-          ) : (
-            <><Search size={16} /> Run Demo Investigation</>
-          )}
-        </button>
+        <div className="flex items-center gap-2">
+          <select
+            value={selectedScenario}
+            onChange={(e) => setSelectedScenario(e.target.value)}
+            className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs text-gray-300 outline-none focus:border-cyan-500/30"
+          >
+            {scenarios.map((s) => (
+              <option key={s} value={s} className="bg-navy-900">
+                {s.replace(/_/g, " ")}
+              </option>
+            ))}
+          </select>
+          <button
+            onClick={() => {
+              reset();
+              setTimeout(() => startInvestigation(selectedScenario), 100);
+            }}
+            disabled={sseState.phase === "streaming" || sseState.phase === "connecting"}
+            className="flex items-center gap-2 rounded-lg bg-gradient-to-r from-cyan-500 to-blue-600 px-4 py-2 text-sm font-medium text-white transition-all hover:shadow-lg hover:shadow-cyan-500/25 disabled:opacity-50"
+          >
+            {sseState.phase === "streaming" ? (
+              <><Loader2 size={16} className="animate-spin" /> Streaming...</>
+            ) : (
+              <><Zap size={16} /> Stream Investigation</>
+            )}
+          </button>
+        </div>
       </div>
 
-      {selectedInv ? (
-        <div className="grid grid-cols-12 gap-4">
-          {/* Agent steps sidebar */}
-          <div className="col-span-3 space-y-2">
-            <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-500">Pipeline Steps</h3>
-            {steps.map((step) => (
-              <AgentStepCard
-                key={step.key}
-                step={step.key}
-                data={selectedInv[step.dataKey] as Record<string, unknown> | null}
-                isActive={activeStep === step.key}
-                onClick={() => setActiveStep(step.key)}
-              />
-            ))}
-            <div className="mt-4 rounded-lg border border-white/10 bg-white/5 p-3">
-              <p className="text-[10px] uppercase tracking-wider text-gray-500">Total Time</p>
-              <p className="text-lg font-bold text-cyan-400">{selectedInv.total_processing_time_ms.toFixed(0)}ms</p>
+      {/* SSE Pipeline Viewer */}
+      {sseState.phase !== "idle" && (
+        <div className="space-y-4">
+          {/* Pipeline header */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              {sseState.severity && (
+                <span className={getSeverityBadgeClass(sseState.severity)}>
+                  {sseState.severity.toUpperCase()}
+                </span>
+              )}
+              <span className="font-mono text-xs text-gray-500">
+                {sseState.investigationId}
+              </span>
+              {sseState.ruleName && (
+                <span className="text-xs text-gray-400">{sseState.ruleName}</span>
+              )}
+            </div>
+
+            {/* Progress */}
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-1.5">
+                {sseState.agents.map((a, i) => (
+                  <div
+                    key={i}
+                    className={cn(
+                      "h-2 w-8 rounded-full transition-all duration-500",
+                      a.status === "completed"
+                        ? "bg-green-500"
+                        : a.status === "running"
+                          ? "bg-cyan-400 animate-pulse"
+                          : "bg-white/10"
+                    )}
+                  />
+                ))}
+              </div>
+              <span className="text-xs text-gray-400">
+                {completedCount}/5 agents
+              </span>
             </div>
           </div>
 
-          {/* Agent output detail */}
-          <div className="col-span-9">
-            <div className="glass-card min-h-[400px]">
-              <h3 className="mb-4 text-sm font-semibold text-white">
-                {(activeData as Record<string, unknown>)?._agent as string || activeStep} Output
-              </h3>
-              <pre className="overflow-auto rounded-lg bg-navy-950 p-4 font-mono text-xs leading-relaxed text-gray-300">
-                {activeData ? JSON.stringify(activeData, null, 2) : "No data available"}
-              </pre>
+          {/* Agent steps */}
+          <div className="space-y-2">
+            {sseState.agents.map((agent) => (
+              <AgentStepRow key={agent.index} agent={agent} />
+            ))}
+          </div>
+
+          {/* Pipeline result */}
+          {sseState.phase === "completed" && sseState.totalTimeMs && (
+            <div className="flex items-center justify-between rounded-xl border border-green-500/20 bg-green-500/5 px-4 py-3">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 size={18} className="text-green-400" />
+                <span className="text-sm font-medium text-green-400">
+                  Investigation Complete
+                </span>
+              </div>
+              <span className="text-sm font-bold text-green-400">
+                {sseState.totalTimeMs.toFixed(0)}ms total
+              </span>
             </div>
+          )}
+
+          {sseState.phase === "failed" && (
+            <div className="flex items-center gap-2 rounded-xl border border-red-500/20 bg-red-500/5 px-4 py-3">
+              <XCircle size={18} className="text-red-400" />
+              <span className="text-sm font-medium text-red-400">
+                Pipeline Failed: {sseState.error}
+              </span>
+            </div>
+          )}
+
+          {/* Human-in-the-Loop Decision Panel */}
+          {sseState.phase === "completed" && sseState.investigationId && (
+            <DecisionPanel
+              investigationId={sseState.investigationId}
+              severity={sseState.severity}
+              avgConfidence={avgConfidence}
+            />
+          )}
+        </div>
+      )}
+
+      {/* Past Investigations List */}
+      {investigations.length > 0 && (
+        <div>
+          <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold text-gray-400">
+            <Clock size={14} /> Past Investigations ({investigations.length})
+          </h2>
+          <div className="space-y-2">
+            {investigations.slice(0, 10).map((inv) => (
+              <div
+                key={inv.investigation_id}
+                className="flex items-center gap-4 rounded-lg border border-white/5 bg-white/[0.02] px-4 py-2.5 text-xs"
+              >
+                <span className={getSeverityBadgeClass(inv.severity)}>
+                  {inv.severity.toUpperCase()}
+                </span>
+                <span className="font-mono text-gray-400">{inv.investigation_id}</span>
+                <span className="flex items-center gap-1 text-gray-500">
+                  <Clock size={12} /> {inv.processing_time_ms?.toFixed(0) || "?"}ms
+                </span>
+                <span className="ml-auto flex items-center gap-1 text-green-400">
+                  <CheckCircle2 size={12} /> {inv.status}
+                </span>
+              </div>
+            ))}
           </div>
         </div>
-      ) : (
+      )}
+
+      {/* Empty state */}
+      {sseState.phase === "idle" && investigations.length === 0 && (
         <div className="glass-card flex flex-col items-center py-16 text-center">
           <Search size={48} className="mb-4 text-gray-600" />
-          <p className="text-sm text-gray-500">No investigation selected</p>
-          <p className="mt-1 text-xs text-gray-600">Run a demo investigation or select one from the list</p>
+          <p className="text-sm text-gray-500">No investigations yet</p>
+          <p className="mt-1 text-xs text-gray-600">
+            Select a scenario and click "Stream Investigation" to watch agents work in real-time
+          </p>
         </div>
       )}
     </div>
