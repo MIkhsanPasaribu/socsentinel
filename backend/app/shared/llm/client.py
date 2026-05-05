@@ -124,6 +124,27 @@ class MockChatModel(BaseChatModel):
                 ],
                 "confidence": 0.91
             })
+        elif "response" in identity or "planner" in identity or "containment" in identity:
+            return json.dumps({
+                "playbook_name": "Brute Force Containment Playbook",
+                "priority": "immediate",
+                "containment_status": "not_started",
+                "estimated_containment_time": "15 minutes",
+                "steps": [
+                    {"order": 1, "action": "Block IP 203.0.113.42 at perimeter firewall", "tool": "Firewall API", "risk_level": "low", "automated": True, "details": "Add to blocklist rule set"},
+                    {"order": 2, "action": "Force password reset for targeted account admin01", "tool": "Active Directory", "risk_level": "medium", "automated": True, "details": "Trigger immediate password expiry"},
+                    {"order": 3, "action": "Enable account lockout after 5 failed attempts", "tool": "Group Policy", "risk_level": "low", "automated": False, "details": "Update GPO lockout threshold"},
+                    {"order": 4, "action": "Enable MFA for all domain admin accounts", "tool": "Identity Provider", "risk_level": "low", "automated": False, "details": "Enforce MFA via Conditional Access Policy"},
+                    {"order": 5, "action": "Scan for lateral movement from compromised credentials", "tool": "EDR Console", "risk_level": "low", "automated": True, "details": "Run threat hunt query for admin01 activity"}
+                ],
+                "post_incident": [
+                    "Conduct post-incident review within 24 hours",
+                    "Update threat intelligence feeds with attacker IOCs",
+                    "Review authentication logging coverage",
+                    "Schedule security awareness training for targeted team"
+                ],
+                "confidence": 0.87
+            })
         else:
             return json.dumps({
                 "response": "Mock response for development",
