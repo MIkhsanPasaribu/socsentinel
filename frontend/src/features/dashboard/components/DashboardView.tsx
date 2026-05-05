@@ -1,5 +1,6 @@
-/** SOCsentinel — Dashboard main view. */
+/** SOCsentinel — Dashboard main view (live data from API). */
 
+import { useNavigate } from "react-router-dom";
 import {
   Shield,
   AlertTriangle,
@@ -8,8 +9,15 @@ import {
   Activity,
   Zap,
   TrendingDown,
+  TrendingUp,
   Brain,
+  ArrowRight,
+  RefreshCw,
 } from "lucide-react";
+import { usePipelineStats, useRecentInvestigations } from "../hooks/useDashboardStats";
+import { useMutation } from "@tanstack/react-query";
+import { apiClient } from "../../../shared/lib/api";
+import { getSeverityBadgeClass, formatRelativeTime } from "../../../shared/lib/utils";
 
 /** Stat card for the dashboard overview. */
 function StatCard({
@@ -19,6 +27,7 @@ function StatCard({
   icon,
   trend,
   accentColor = "cyan",
+  isLoading = false,
 }: {
   title: string;
   value: string | number;
@@ -26,6 +35,7 @@ function StatCard({
   icon: React.ReactNode;
   trend?: { value: string; direction: "up" | "down" };
   accentColor?: "cyan" | "orange" | "green" | "red";
+  isLoading?: boolean;
 }) {
   const accentMap = {
     cyan: "from-cyan-500/20 to-blue-500/20 border-cyan-500/30",
@@ -48,7 +58,11 @@ function StatCard({
       <div className="flex items-start justify-between">
         <div>
           <p className="text-sm font-medium text-gray-400">{title}</p>
-          <p className="mt-2 text-3xl font-bold text-white">{value}</p>
+          {isLoading ? (
+            <div className="mt-2 h-9 w-20 animate-pulse rounded bg-white/10" />
+          ) : (
+            <p className="mt-2 text-3xl font-bold text-white">{value}</p>
+          )}
           <p className="mt-1 text-xs text-gray-500">{subtitle}</p>
         </div>
         <div className={`rounded-lg bg-white/5 p-2.5 ${iconColorMap[accentColor]}`}>
@@ -57,15 +71,14 @@ function StatCard({
       </div>
       {trend && (
         <div className="mt-3 flex items-center gap-1.5">
-          <TrendingDown
-            size={14}
-            className={
-              trend.direction === "down" ? "text-green-400" : "text-red-400"
-            }
-          />
+          {trend.direction === "down" ? (
+            <TrendingDown size={14} className="text-green-400" />
+          ) : (
+            <TrendingUp size={14} className="text-cyan-400" />
+          )}
           <span
             className={`text-xs font-medium ${
-              trend.direction === "down" ? "text-green-400" : "text-red-400"
+              trend.direction === "down" ? "text-green-400" : "text-cyan-400"
             }`}
           >
             {trend.value}
@@ -81,24 +94,16 @@ function AgentCard({
   name,
   role,
   model,
-  status,
+  avgTime,
+  totalRuns,
 }: {
   name: string;
   role: string;
   model: string;
-  status: "active" | "idle" | "processing";
+  avgTime?: number;
+  totalRuns?: number;
 }) {
-  const statusStyles = {
-    active: { dot: "agent-active", label: "Online", color: "text-green-400" },
-    idle: { dot: "agent-idle", label: "Idle", color: "text-gray-400" },
-    processing: {
-      dot: "agent-active",
-      label: "Processing",
-      color: "text-cyan-400",
-    },
-  };
-
-  const s = statusStyles[status];
+  const hasRuns = totalRuns !== undefined && totalRuns > 0;
 
   return (
     <div className="glass-card animate-slide-up flex items-center justify-between">
@@ -115,16 +120,79 @@ function AgentCard({
         <span className="rounded-md bg-white/5 px-2 py-1 font-mono text-[10px] text-gray-400">
           {model}
         </span>
-        <div className="flex items-center gap-1.5">
-          <span className={s.dot} />
-          <span className={`text-xs font-medium ${s.color}`}>{s.label}</span>
-        </div>
+        {hasRuns ? (
+          <div className="text-right">
+            <p className="text-xs font-medium text-cyan-400">{avgTime?.toFixed(0)}ms avg</p>
+            <p className="text-[10px] text-gray-500">{totalRuns} runs</p>
+          </div>
+        ) : (
+          <div className="flex items-center gap-1.5">
+            <span className="agent-active" />
+            <span className="text-xs font-medium text-green-400">Online</span>
+          </div>
+        )}
       </div>
     </div>
   );
 }
 
+/** Recent investigation row. */
+function InvestigationRow({
+  inv,
+  onClick,
+}: {
+  inv: {
+    investigation_id: string;
+    alert_id: string;
+    status: string;
+    severity: string;
+    processing_time_ms: number;
+    started_at: string;
+  };
+  onClick: () => void;
+}) {
+  return (
+    <div
+      onClick={onClick}
+      className="flex cursor-pointer items-center gap-4 rounded-lg border border-white/5 bg-white/[0.02] px-4 py-3 transition-all hover:border-cyan-500/20 hover:bg-white/[0.04]"
+    >
+      <span className={getSeverityBadgeClass(inv.severity)}>
+        {inv.severity.toUpperCase()}
+      </span>
+      <div className="flex-1">
+        <p className="font-mono text-xs text-gray-300">{inv.investigation_id}</p>
+        <p className="text-[10px] text-gray-500">{inv.alert_id}</p>
+      </div>
+      <div className="flex items-center gap-1 text-xs text-gray-400">
+        <Clock size={12} />
+        <span>{inv.processing_time_ms?.toFixed(0) || "?"}ms</span>
+      </div>
+      <span className="flex items-center gap-1 text-xs text-green-400">
+        <CheckCircle2 size={12} />
+        {inv.status}
+      </span>
+      <span className="text-[10px] text-gray-500">{formatRelativeTime(inv.started_at)}</span>
+      <ArrowRight size={14} className="text-gray-500" />
+    </div>
+  );
+}
+
 export function DashboardView() {
+  const navigate = useNavigate();
+  const { data: stats, isLoading: statsLoading } = usePipelineStats();
+  const { data: investigations, isLoading: invLoading } = useRecentInvestigations();
+
+  const generateAndInvestigate = useMutation({
+    mutationFn: async () => {
+      const res = await apiClient.post("/pipeline/investigate-demo?scenario=brute_force");
+      return res.data;
+    },
+  });
+
+  /** Find agent performance data by name. */
+  const getAgentPerf = (name: string) =>
+    stats?.agent_performance?.find((a) => a.agent === name);
+
   return (
     <div className="space-y-6">
       {/* Page Header */}
@@ -140,34 +208,50 @@ export function DashboardView() {
       {/* Stats Grid */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard
-          title="Total Alerts Today"
-          value={127}
-          subtitle="Across all sources"
+          title="Total Investigations"
+          value={stats?.total_investigations ?? 0}
+          subtitle="All-time processed"
           icon={<AlertTriangle size={22} />}
           accentColor="orange"
-          trend={{ value: "12% from yesterday", direction: "down" }}
+          isLoading={statsLoading}
         />
         <StatCard
           title="Auto-Triaged"
-          value={89}
-          subtitle="70% triage rate"
+          value={stats?.auto_triaged ?? 0}
+          subtitle={`${stats?.auto_triage_rate ?? 0}% auto-triage rate`}
           icon={<Zap size={22} />}
           accentColor="cyan"
+          isLoading={statsLoading}
+          trend={
+            stats && stats.auto_triage_rate > 0
+              ? { value: `${stats.auto_triage_rate}% automated`, direction: "up" }
+              : undefined
+          }
         />
         <StatCard
-          title="Resolved"
-          value={73}
-          subtitle="82% resolution rate"
+          title="Completed"
+          value={stats?.completed ?? 0}
+          subtitle={`${stats?.failed ?? 0} failed`}
           icon={<CheckCircle2 size={22} />}
           accentColor="green"
+          isLoading={statsLoading}
         />
         <StatCard
           title="Avg Response Time"
-          value="< 45s"
+          value={
+            stats?.avg_processing_time_ms
+              ? `${stats.avg_processing_time_ms.toFixed(0)}ms`
+              : "—"
+          }
           subtitle="Per investigation"
           icon={<Clock size={22} />}
           accentColor="cyan"
-          trend={{ value: "30% faster than manual", direction: "down" }}
+          isLoading={statsLoading}
+          trend={
+            stats && stats.avg_processing_time_ms > 0
+              ? { value: "30x faster than manual", direction: "down" }
+              : undefined
+          }
         />
       </div>
 
@@ -185,57 +269,103 @@ export function DashboardView() {
             name="Orchestrator"
             role="SOC Manager"
             model="Qwen3-7B"
-            status="active"
+            avgTime={getAgentPerf("Orchestrator")?.avg_time_ms}
+            totalRuns={getAgentPerf("Orchestrator")?.total_runs}
           />
           <AgentCard
             name="L1 Triage"
             role="L1 Analyst"
             model="Qwen3-4B"
-            status="processing"
+            avgTime={getAgentPerf("L1 Triage")?.avg_time_ms}
+            totalRuns={getAgentPerf("L1 Triage")?.total_runs}
           />
           <AgentCard
             name="Evidence Collector"
             role="L2 Analyst"
             model="Qwen3-7B"
-            status="active"
+            avgTime={getAgentPerf("Evidence Collector")?.avg_time_ms}
+            totalRuns={getAgentPerf("Evidence Collector")?.total_runs}
           />
           <AgentCard
             name="MITRE Mapper"
             role="L2/L3 Analyst"
             model="Qwen3-7B"
-            status="idle"
+            avgTime={getAgentPerf("MITRE Mapper")?.avg_time_ms}
+            totalRuns={getAgentPerf("MITRE Mapper")?.total_runs}
           />
           <AgentCard
             name="Report Writer"
             role="Senior Analyst"
             model="Qwen3-14B"
-            status="idle"
+            avgTime={getAgentPerf("Report Writer")?.avg_time_ms}
+            totalRuns={getAgentPerf("Report Writer")?.total_runs}
           />
         </div>
       </div>
 
-      {/* Pipeline Activity (placeholder for real-time feed) */}
+      {/* Recent Investigations */}
       <div>
-        <div className="mb-4 flex items-center gap-2">
-          <Shield size={18} className="text-cyan-400" />
-          <h2 className="text-lg font-semibold text-white">
-            Recent Investigations
-          </h2>
-        </div>
-        <div className="glass-card">
-          <div className="flex flex-col items-center justify-center py-12 text-center">
-            <Shield size={48} className="mb-4 text-gray-600" />
-            <p className="text-sm text-gray-500">
-              No active investigations. Submit an alert to begin.
-            </p>
-            <button
-              id="btn-generate-alert"
-              className="mt-4 rounded-lg bg-gradient-to-r from-cyan-500 to-blue-600 px-4 py-2 text-sm font-medium text-white transition-all hover:shadow-lg hover:shadow-cyan-500/25"
-            >
-              Generate Synthetic Alert
-            </button>
+        <div className="mb-4 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Shield size={18} className="text-cyan-400" />
+            <h2 className="text-lg font-semibold text-white">
+              Recent Investigations
+            </h2>
           </div>
+          {investigations && investigations.length > 0 && (
+            <button
+              onClick={() => navigate("/investigation")}
+              className="flex items-center gap-1 text-xs font-medium text-cyan-400 transition-colors hover:text-cyan-300"
+            >
+              View all <ArrowRight size={14} />
+            </button>
+          )}
         </div>
+
+        {invLoading ? (
+          <div className="space-y-2">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="h-14 animate-pulse rounded-lg bg-white/5" />
+            ))}
+          </div>
+        ) : investigations && investigations.length > 0 ? (
+          <div className="space-y-2">
+            {investigations.slice(0, 5).map((inv) => (
+              <InvestigationRow
+                key={inv.investigation_id}
+                inv={inv}
+                onClick={() => navigate("/investigation")}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="glass-card">
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <Shield size={48} className="mb-4 text-gray-600" />
+              <p className="text-sm text-gray-500">
+                No active investigations. Submit an alert to begin.
+              </p>
+              <button
+                id="btn-generate-alert"
+                onClick={() => generateAndInvestigate.mutate()}
+                disabled={generateAndInvestigate.isPending}
+                className="mt-4 flex items-center gap-2 rounded-lg bg-gradient-to-r from-cyan-500 to-blue-600 px-4 py-2 text-sm font-medium text-white transition-all hover:shadow-lg hover:shadow-cyan-500/25 disabled:opacity-50"
+              >
+                {generateAndInvestigate.isPending ? (
+                  <>
+                    <RefreshCw size={16} className="animate-spin" />
+                    Running Pipeline...
+                  </>
+                ) : (
+                  <>
+                    <Zap size={16} />
+                    Generate & Investigate Alert
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
