@@ -11,6 +11,7 @@ import {
   Activity,
 } from "lucide-react";
 import { cn } from "../../lib/utils";
+import { useInvestigationList } from "../../hooks/useInvestigations";
 
 interface NavItem {
   label: string;
@@ -28,6 +29,17 @@ const navItems: NavItem[] = [
 ];
 
 export function Sidebar() {
+  const { data: investigations } = useInvestigationList();
+  
+  const completedCount = investigations?.filter(i => i.status === "completed").length || 0;
+  const activeCount = investigations?.filter(i => i.status !== "completed").length || 0;
+
+  const getBadge = (path: string) => {
+    if (path === "/investigation") return activeCount > 0 ? activeCount : undefined;
+    if (path === "/reports") return completedCount > 0 ? completedCount : undefined;
+    return undefined;
+  };
+
   return (
     <aside
       id="sidebar-nav"
@@ -66,9 +78,14 @@ export function Sidebar() {
           >
             {item.icon}
             <span>{item.label}</span>
-            {item.badge !== undefined && item.badge > 0 && (
-              <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-alert-orange/20 px-1.5 text-xs font-semibold text-alert-orange">
-                {item.badge}
+            {getBadge(item.path) !== undefined && (
+              <span className={cn(
+                "ml-auto flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-xs font-semibold",
+                item.path === "/investigation" 
+                  ? "bg-cyan-500/20 text-cyan-400 animate-pulse" 
+                  : "bg-emerald-500/20 text-emerald-400"
+              )}>
+                {getBadge(item.path)}
               </span>
             )}
           </NavLink>
@@ -79,7 +96,7 @@ export function Sidebar() {
       <div className="border-t border-white/10 px-4 py-4">
         <div className="flex items-center gap-2 text-xs text-gray-500">
           <Activity size={14} className="text-cyan-400" />
-          <span>5 Agents Online</span>
+          <span>6 Agents Online</span>
           <span className="agent-active ml-auto" />
         </div>
       </div>
