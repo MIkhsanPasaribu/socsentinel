@@ -1,18 +1,16 @@
 /** SOCsentinel — Alerts feature — Alert Queue view. */
 
 import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Bell,
   RefreshCw,
-  Zap,
   Clock,
   Server,
   ArrowRight,
 } from "lucide-react";
 import { apiClient } from "../../../shared/lib/api";
 import {
-  cn,
   formatRelativeTime,
   getSeverityBadgeClass,
 } from "../../../shared/lib/utils";
@@ -64,7 +62,7 @@ export function AlertsView() {
   const investigateMutation = useMutation({
     mutationFn: (alert: Alert) =>
       apiClient.post<APIResponse>("/pipeline/investigate", alert),
-    onSuccess: (res) => {
+    onSuccess: () => {
       setInvestigating(null);
       queryClient.invalidateQueries({ queryKey: ["investigations"] });
     },
