@@ -24,6 +24,7 @@ from app.features.triage.service import classify_alert
 from app.features.evidence.service import collect_evidence
 from app.features.mitre_mapper.service import map_to_attack
 from app.features.report_writer.service import generate_report
+from app.features.response_planner.service import generate_playbook
 from app.features.pipeline.service import _pipeline_store
 from app.features.alerts.generator import generate_alert
 
@@ -60,7 +61,7 @@ async def _stream_investigation(alert: AlertInput) -> AsyncGenerator[str, None]:
         "alert_id": alert.alert_id,
         "severity": alert.severity.value,
         "rule_name": alert.rule_name,
-        "total_agents": 5,
+        "total_agents": 6,
     })
 
     agents = [
@@ -109,6 +110,20 @@ async def _stream_investigation(alert: AlertInput) -> AsyncGenerator[str, None]:
             ),
             "status": InvestigationStatus.GENERATING_REPORT,
         },
+        {
+            "step": "response_planner",
+            "name": "Response Planner",
+            "role": "L3 Incident Responder",
+            "model": "Qwen3-14B",
+            "fn": lambda: generate_playbook(
+                alert_data=alert.model_dump(),
+                triage_result=state.triage_result or {},
+                evidence_result=state.evidence_result or {},
+                mitre_result=state.mitre_result or {},
+                report_result=state.report_result or {},
+            ),
+            "status": InvestigationStatus.GENERATING_REPORT, # Using same status for now or could add new one
+        },
     ]
 
     try:
@@ -145,6 +160,8 @@ async def _stream_investigation(alert: AlertInput) -> AsyncGenerator[str, None]:
                 state.mitre_result = result
             elif agent["step"] == "report_writer":
                 state.report_result = result
+            elif agent["step"] == "response_planner":
+                state.response_result = result
 
             # Add audit entry
             state.audit_trail.append({
@@ -200,7 +217,7 @@ async def _stream_investigation(alert: AlertInput) -> AsyncGenerator[str, None]:
             "investigation_id": investigation_id,
             "status": "completed",
             "total_processing_time_ms": state.total_processing_time_ms,
-            "agents_completed": 5,
+            "agents_completed": 6,
         })
 
     except Exception as e:

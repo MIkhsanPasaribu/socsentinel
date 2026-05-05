@@ -12,6 +12,8 @@ from app.features.pipeline.service import (
     list_investigations,
 )
 from app.features.pipeline.stats import get_pipeline_stats
+from app.features.pipeline.mitre_stats import get_mitre_heatmap
+from app.features.pipeline.thinking import get_thinking_mode, set_thinking_mode
 from app.features.alerts.generator import generate_alert
 
 router = APIRouter(prefix="/pipeline", tags=["Investigation Pipeline"])
@@ -96,4 +98,36 @@ async def stats_endpoint() -> APIResponse:
         success=True,
         message="Pipeline statistics",
         data=stats,
+    )
+
+
+@router.get("/mitre-heatmap", response_model=APIResponse)
+async def mitre_heatmap_endpoint() -> APIResponse:
+    """Get MITRE ATT&CK technique density across all investigations."""
+    heatmap = get_mitre_heatmap()
+    return APIResponse(
+        success=True,
+        message="MITRE ATT&CK Heatmap Data",
+        data=heatmap,
+    )
+
+
+@router.post("/thinking-mode", response_model=APIResponse)
+async def toggle_thinking_mode_endpoint(enabled: bool) -> APIResponse:
+    """Toggle Qwen3 chain-of-thought thinking mode."""
+    result = set_thinking_mode(enabled)
+    return APIResponse(
+        success=True,
+        message=f"Thinking mode {'enabled' if enabled else 'disabled'}",
+        data=result,
+    )
+
+@router.get("/thinking-mode", response_model=APIResponse)
+async def get_thinking_mode_endpoint() -> APIResponse:
+    """Get current state of Qwen3 thinking mode."""
+    enabled = get_thinking_mode()
+    return APIResponse(
+        success=True,
+        message="Thinking mode status retrieved",
+        data={"thinking_mode": enabled},
     )
