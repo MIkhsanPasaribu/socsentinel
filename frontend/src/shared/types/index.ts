@@ -48,6 +48,8 @@ export interface Investigation {
   evidence_result: Record<string, unknown> | null;
   mitre_result: Record<string, unknown> | null;
   report_result: Record<string, unknown> | null;
+  escalation_result: Record<string, unknown> | null;
+  analyst_decision: Record<string, unknown> | null;
   audit_trail: AuditEntry[];
   total_processing_time_ms: number;
 }
