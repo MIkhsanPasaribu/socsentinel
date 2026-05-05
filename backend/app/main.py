@@ -102,6 +102,8 @@ def create_app() -> FastAPI:
     from app.features.alerts.siem_router import router as siem_router
     from app.features.pipeline.router import router as pipeline_router
     from app.features.pipeline.sse import router as sse_router
+    from app.features.pipeline.decision import router as decision_router
+    from app.features.pipeline.benchmark import router as benchmark_router
 
     api_prefix = settings.api_v1_prefix
 
@@ -114,6 +116,8 @@ def create_app() -> FastAPI:
     app.include_router(siem_router, prefix=api_prefix)
     app.include_router(pipeline_router, prefix=api_prefix)
     app.include_router(sse_router, prefix=api_prefix)
+    app.include_router(decision_router, prefix=api_prefix)
+    app.include_router(benchmark_router, prefix=api_prefix)
 
     # Serve React frontend static files in production (HF Spaces)
     import os

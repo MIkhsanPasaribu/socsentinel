@@ -131,6 +131,11 @@ class PipelineState(BaseModel):
     mitre_result: dict | None = None
     report_result: dict | None = None
 
+    # Escalation & Human Decision
+    escalation_result: dict | None = None
+    analyst_decision: dict | None = None
+
     # Audit
     audit_trail: list[dict] = Field(default_factory=list)
     total_processing_time_ms: float = 0.0
+
