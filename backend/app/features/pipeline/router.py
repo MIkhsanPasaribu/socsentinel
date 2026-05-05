@@ -11,6 +11,7 @@ from app.features.pipeline.service import (
     get_investigation,
     list_investigations,
 )
+from app.features.pipeline.stats import get_pipeline_stats
 from app.features.alerts.generator import generate_alert
 
 router = APIRouter(prefix="/pipeline", tags=["Investigation Pipeline"])
@@ -72,7 +73,6 @@ async def get_status_endpoint(investigation_id: str) -> APIResponse:
         data=state.model_dump(),
     )
 
-
 @router.get("/list", response_model=APIResponse)
 async def list_investigations_endpoint() -> APIResponse:
     """List all investigations with summary information."""
@@ -81,4 +81,19 @@ async def list_investigations_endpoint() -> APIResponse:
         success=True,
         message=f"Found {len(investigations)} investigations",
         data=investigations,
+    )
+
+
+@router.get("/stats", response_model=APIResponse)
+async def stats_endpoint() -> APIResponse:
+    """Get aggregate pipeline statistics for the dashboard.
+
+    Returns metrics: total investigations, avg time, severity distribution,
+    false positive rate, agent performance breakdown.
+    """
+    stats = get_pipeline_stats()
+    return APIResponse(
+        success=True,
+        message="Pipeline statistics",
+        data=stats,
     )
