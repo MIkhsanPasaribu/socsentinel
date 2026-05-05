@@ -130,6 +130,7 @@ class PipelineState(BaseModel):
     evidence_result: dict | None = None
     mitre_result: dict | None = None
     report_result: dict | None = None
+    response_result: dict | None = None
 
     # Escalation & Human Decision
     escalation_result: dict | None = None
