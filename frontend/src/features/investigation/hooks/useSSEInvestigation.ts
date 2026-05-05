@@ -1,6 +1,7 @@
 /** SOCsentinel — SSE investigation streaming hook. */
 
 import { useState, useCallback, useRef } from "react";
+import { useToast } from "../../../shared/components/Toast";
 
 export interface SSEAgentEvent {
   investigation_id: string;
@@ -60,10 +61,12 @@ const INITIAL_AGENTS: AgentStep[] = [
   { index: 2, name: "Evidence Collector", role: "L2 Analyst", model: "Qwen3-7B", step: "evidence_collector", status: "pending" },
   { index: 3, name: "MITRE Mapper", role: "L2/L3 Analyst", model: "Qwen3-7B", step: "mitre_mapper", status: "pending" },
   { index: 4, name: "Report Writer", role: "Senior Analyst", model: "Qwen3-14B", step: "report_writer", status: "pending" },
+  { index: 5, name: "Response Planner", role: "L3 Incident Responder", model: "Qwen3-14B", step: "response_planner", status: "pending" },
 ];
 
 /** Hook to stream an investigation via Server-Sent Events. */
 export function useSSEInvestigation(apiUrl: string) {
+  const { addToast } = useToast();
   const [state, setState] = useState<SSEState>({
     phase: "idle",
     investigationId: null,
@@ -125,6 +128,15 @@ export function useSSEInvestigation(apiUrl: string) {
 
       es.addEventListener("agent_completed", (e) => {
         const data: SSEAgentEvent = JSON.parse(e.data);
+        
+        addToast({
+          type: "success",
+          title: `${data.agent_name} Completed`,
+          message: `Processed in ${data.processing_time_ms?.toFixed(0)}ms. ${
+            data.classification ? `Result: ${data.classification.toUpperCase()}` : ""
+          }`,
+        });
+
         setState((prev) => ({
           ...prev,
           agents: prev.agents.map((a) =>
@@ -143,6 +155,15 @@ export function useSSEInvestigation(apiUrl: string) {
 
       es.addEventListener("pipeline_completed", (e) => {
         const data: SSEPipelineEvent = JSON.parse(e.data);
+        
+        addToast({
+          type: data.early_exit ? "info" : "success",
+          title: "Investigation Complete",
+          message: data.early_exit 
+            ? `Early exit: ${data.reason}. Total time: ${data.total_processing_time_ms?.toFixed(0)}ms`
+            : `All agents finished successfully in ${data.total_processing_time_ms?.toFixed(0)}ms`,
+        });
+
         setState((prev) => ({
           ...prev,
           phase: "completed",
