@@ -39,7 +39,6 @@ export function ConfidenceGauge({
 }: ConfidenceGaugeProps) {
   const pct = Math.round(score * 100);
   const colorClass = getConfidenceColor(score);
-  const gradientClass = getConfidenceGradient(score);
 
   const sizeMap = {
     sm: { ring: 40, stroke: 3, text: "text-xs", labelText: "text-[9px]" },
