@@ -1,0 +1,1 @@
+# SOCsentinel — MITRE Mapper feature
