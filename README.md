@@ -9,6 +9,11 @@ app_port: 7860
 
 # 🛡️ SOCsentinel
 
+
+<p align="center">
+  <img src="assets/logo.png" alt="SOCsentinel Logo" width="120" />
+</p>
+
 **Multi-Agent LLM Assistant for SOC Analysts**
 
 > Automating Level 1-3 SOC analyst workflows with 5 specialized AI agents powered by Qwen3 on AMD MI300X (ROCm).
@@ -88,8 +93,8 @@ python -m venv .venv
 pip install -r requirements.txt
 cp .env.example .env  # Edit as needed (LLM_PROVIDER=mock for local dev)
 
-# Optional: Ingest MITRE ATT&CK data
-python -m app.shared.rag.ingest
+# Ingest MITRE ATT&CK data (697 techniques)
+python -m scripts.ingest_mitre
 
 # Start server
 uvicorn app.main:app --reload --port 8000
@@ -120,6 +125,10 @@ pytest tests/ -v
 | `POST` | `/api/v1/pipeline/investigate-demo` | Demo with synthetic alert |
 | `GET` | `/api/v1/pipeline/list` | List all investigations |
 | `GET` | `/api/v1/pipeline/status/{id}` | Get investigation status |
+| `GET` | `/api/v1/pipeline/stats` | Dashboard aggregate metrics |
+| `GET` | `/api/v1/pipeline/stream-investigate` | SSE real-time pipeline stream |
+| `POST` | `/api/v1/pipeline/decision/{id}` | Human-in-Loop decision (approve/escalate/reject) |
+| `POST` | `/api/v1/pipeline/benchmark` | Run 5-scenario latency benchmark |
 | `POST` | `/api/v1/orchestrator/route` | Route alert (standalone) |
 | `POST` | `/api/v1/triage/classify` | Classify alert (standalone) |
 | `POST` | `/api/v1/evidence/collect` | Collect evidence (standalone) |
@@ -140,12 +149,13 @@ Interactive API docs available at `http://localhost:8000/docs`.
 ## 🧪 Testing
 
 ```
-48 tests passed ✅
+58 tests passed
 ├── test_alerts.py       — 5 tests (synthetic generator)
 ├── test_api.py          — 6 tests (API integration)
+├── test_escalation.py   — 10 tests (L1/L2/L3 escalation rules)
 ├── test_guardrails.py   — 10 tests (security guardrails)
 ├── test_llm_client.py   — 8 tests (mock LLM)
-├── test_pipeline.py     — 5 tests (E2E pipeline)
+├── test_pipeline.py     — 5 tests (E2E pipeline + escalation)
 └── test_siem.py         — 14 tests (Wazuh connector)
 ```
 
