@@ -1,3 +1,12 @@
+---
+title: SOCsentinel
+emoji: 🛡️
+colorFrom: blue
+colorTo: cyan
+sdk: docker
+app_port: 7860
+---
+
 # 🛡️ SOCsentinel
 
 **Multi-Agent LLM Assistant for SOC Analysts**
