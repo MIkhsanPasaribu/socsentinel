@@ -13,6 +13,7 @@ from typing import Any
 from app.core.logger import get_logger
 from app.shared.schemas import AlertInput, InvestigationStatus, PipelineState
 from app.shared.exceptions.base import PipelineError
+from app.shared.utils.escalation import determine_escalation_level
 
 from app.features.orchestrator.service import route_alert
 from app.features.triage.service import classify_alert
@@ -81,8 +82,25 @@ async def run_investigation(alert: AlertInput) -> PipelineState:
         state.triage_result = triage_result
         _add_audit_entry(state, "l1_triage", triage_result)
 
-        # Check if triage says to close (false positive)
+        # Escalation check after triage (L1 → L2)
         classification = triage_result.get("classification", "investigate")
+        escalation = determine_escalation_level(
+            severity=alert.severity.value,
+            triage_classification=classification,
+            triage_confidence=triage_result.get("confidence"),
+        )
+        state.escalation_result = escalation
+        state.audit_trail.append({
+            "timestamp": datetime.utcnow().isoformat(),
+            "step": "escalation_check",
+            "agent": "Escalation Engine",
+            "level": escalation["level"],
+            "reason": escalation["reason"],
+            "auto_escalated": escalation["auto_escalated"],
+            "status": "completed",
+        })
+
+        # Check if triage says to close (false positive)
         if classification == "close":
             logger.info(
                 "Alert closed by L1 Triage (false positive)",
@@ -105,6 +123,28 @@ async def run_investigation(alert: AlertInput) -> PipelineState:
         mitre_result = await map_to_attack(alert, evidence_context=evidence_result)
         state.mitre_result = mitre_result
         _add_audit_entry(state, "mitre_mapper", mitre_result)
+
+        # Re-evaluate escalation after MITRE mapping (L2 → L3)
+        techniques = mitre_result.get("techniques", [])
+        kill_chain = mitre_result.get("kill_chain_phase", "")
+        escalation_post_mitre = determine_escalation_level(
+            severity=alert.severity.value,
+            triage_classification=classification,
+            triage_confidence=triage_result.get("confidence"),
+            technique_count=len(techniques) if isinstance(techniques, list) else 0,
+            kill_chain_phase=kill_chain,
+        )
+        if escalation_post_mitre["level"] != escalation["level"]:
+            state.escalation_result = escalation_post_mitre
+            state.audit_trail.append({
+                "timestamp": datetime.utcnow().isoformat(),
+                "step": "escalation_upgrade",
+                "agent": "Escalation Engine",
+                "previous_level": escalation["level"],
+                "new_level": escalation_post_mitre["level"],
+                "reason": escalation_post_mitre["reason"],
+                "status": "completed",
+            })
 
         # Step 5: Report Generation
         state.status = InvestigationStatus.GENERATING_REPORT
