@@ -1,0 +1,28 @@
+# SOCsentinel — Development Docker Compose
+# Runs backend API with hot-reload
+
+version: "3.8"
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: socsentinel_backend
+    environment:
+      - ENVIRONMENT=development
+      - LOG_LEVEL=DEBUG
+      - LLM_PROVIDER=mock
+      - FRONTEND_URL=http://localhost:5173
+      - CHROMA_PERSIST_DIR=/app/data/chroma_db
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend/app:/app/app        # Hot reload
+      - ./backend/prompts:/app/prompts
+      - ./data:/app/data
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    restart: unless-stopped
+
+  # Frontend runs natively for best developer experience
+  # Start with: cd frontend && npm run dev
