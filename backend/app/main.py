@@ -101,6 +101,7 @@ def create_app() -> FastAPI:
     from app.features.alerts.router import router as alerts_router
     from app.features.alerts.siem_router import router as siem_router
     from app.features.pipeline.router import router as pipeline_router
+    from app.features.pipeline.sse import router as sse_router
 
     api_prefix = settings.api_v1_prefix
 
@@ -112,6 +113,24 @@ def create_app() -> FastAPI:
     app.include_router(alerts_router, prefix=api_prefix)
     app.include_router(siem_router, prefix=api_prefix)
     app.include_router(pipeline_router, prefix=api_prefix)
+    app.include_router(sse_router, prefix=api_prefix)
+
+    # Serve React frontend static files in production (HF Spaces)
+    import os
+    static_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "static")
+    if os.path.isdir(static_dir):
+        from fastapi.staticfiles import StaticFiles
+        from fastapi.responses import FileResponse
+
+        @app.get("/{full_path:path}", include_in_schema=False)
+        async def serve_spa(full_path: str):
+            """Serve React SPA — fallback to index.html for client-side routing."""
+            file_path = os.path.join(static_dir, full_path)
+            if os.path.isfile(file_path):
+                return FileResponse(file_path)
+            return FileResponse(os.path.join(static_dir, "index.html"))
+
+        logger.info("Static frontend serving enabled", static_dir=static_dir)
 
     return app
 
