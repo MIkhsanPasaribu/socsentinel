@@ -20,7 +20,8 @@ async def test_full_pipeline_brute_force():
     assert state.evidence_result is not None
     assert state.mitre_result is not None
     assert state.report_result is not None
-    assert len(state.audit_trail) == 5
+    # 5 agent steps + 1-2 escalation entries
+    assert len(state.audit_trail) >= 6
     assert state.total_processing_time_ms > 0
 
 
@@ -50,7 +51,9 @@ async def test_pipeline_audit_trail():
 
     for entry in state.audit_trail:
         assert entry["status"] == "completed"
-        assert entry["processing_time_ms"] >= 0
+        # Escalation entries don't have processing_time_ms
+        if entry["step"] not in ("escalation_check", "escalation_upgrade"):
+            assert entry["processing_time_ms"] >= 0
 
 
 @pytest.mark.asyncio
