@@ -1,0 +1,1 @@
+# SOCsentinel — SIEM connector module
