@@ -25,7 +25,6 @@ interface DecisionPanelProps {
 
 export function DecisionPanel({
   investigationId,
-  severity,
   avgConfidence,
   onDecisionMade,
 }: DecisionPanelProps) {

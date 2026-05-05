@@ -14,7 +14,6 @@ import {
   Target,
   Zap,
   Loader2,
-  AlertTriangle,
 } from "lucide-react";
 import { apiClient } from "../../../shared/lib/api";
 import { cn, getSeverityBadgeClass } from "../../../shared/lib/utils";
@@ -32,6 +31,7 @@ function AgentStepRow({ agent }: { agent: AgentStep }) {
     evidence_collector: Search,
     mitre_mapper: Target,
     report_writer: FileText,
+    response_planner: Zap,
   };
   const Icon = icons[agent.step] || Brain;
 
@@ -215,7 +215,7 @@ export function InvestigationsView() {
                 ))}
               </div>
               <span className="text-xs text-gray-400">
-                {completedCount}/5 agents
+                {completedCount}/6 agents
               </span>
             </div>
           </div>
