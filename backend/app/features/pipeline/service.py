@@ -20,6 +20,7 @@ from app.features.triage.service import classify_alert
 from app.features.evidence.service import collect_evidence
 from app.features.mitre_mapper.service import map_to_attack
 from app.features.report_writer.service import generate_report
+from app.features.response_planner.service import generate_playbook
 
 logger = get_logger(__name__)
 
@@ -156,6 +157,17 @@ async def run_investigation(alert: AlertInput) -> PipelineState:
         )
         state.report_result = report_result
         _add_audit_entry(state, "report_writer", report_result)
+
+        # Step 6: Response Planner
+        response_result = await generate_playbook(
+            alert_data=alert.model_dump(),
+            triage_result=triage_result,
+            evidence_result=evidence_result,
+            mitre_result=mitre_result,
+            report_result=report_result,
+        )
+        state.response_result = response_result
+        _add_audit_entry(state, "response_planner", response_result)
 
         # Complete
         state.status = InvestigationStatus.COMPLETED
