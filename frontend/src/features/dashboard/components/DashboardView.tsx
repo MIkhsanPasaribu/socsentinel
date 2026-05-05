@@ -18,6 +18,7 @@ import { usePipelineStats, useRecentInvestigations } from "../hooks/useDashboard
 import { useMutation } from "@tanstack/react-query";
 import { apiClient } from "../../../shared/lib/api";
 import { getSeverityBadgeClass, formatRelativeTime } from "../../../shared/lib/utils";
+import { MitreHeatmap } from "./MitreHeatmap";
 
 /** Stat card for the dashboard overview. */
 function StatCard({
@@ -229,10 +230,10 @@ export function DashboardView() {
           }
         />
         <StatCard
-          title="Completed"
-          value={stats?.completed ?? 0}
-          subtitle={`${stats?.failed ?? 0} failed`}
-          icon={<CheckCircle2 size={22} />}
+          title="Threat Intel (RAG)"
+          value="100%"
+          subtitle="697 MITRE Techniques"
+          icon={<Shield size={22} />}
           accentColor="green"
           isLoading={statsLoading}
         />
@@ -254,6 +255,9 @@ export function DashboardView() {
           }
         />
       </div>
+
+      {/* MITRE ATT&CK Heatmap */}
+      <MitreHeatmap />
 
       {/* Agent Status */}
       <div>
@@ -300,6 +304,13 @@ export function DashboardView() {
             avgTime={getAgentPerf("Report Writer")?.avg_time_ms}
             totalRuns={getAgentPerf("Report Writer")?.total_runs}
           />
+          <AgentCard
+            name="Response Planner"
+            role="L3 Incident Responder"
+            model="Qwen3-14B"
+            avgTime={getAgentPerf("Response Planner")?.avg_time_ms}
+            totalRuns={getAgentPerf("Response Planner")?.total_runs}
+          />
         </div>
       </div>
 
@@ -339,27 +350,38 @@ export function DashboardView() {
             ))}
           </div>
         ) : (
-          <div className="glass-card">
-            <div className="flex flex-col items-center justify-center py-12 text-center">
-              <Shield size={48} className="mb-4 text-gray-600" />
-              <p className="text-sm text-gray-500">
-                No active investigations. Submit an alert to begin.
+          <div className="glass-card relative overflow-hidden">
+            {/* Background pulse effect */}
+            <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
+              <div className="h-64 w-64 animate-ping rounded-full bg-cyan-500/5 duration-[3000ms]" />
+              <div className="absolute left-1/2 top-1/2 h-32 w-32 -translate-x-1/2 -translate-y-1/2 animate-ping rounded-full bg-blue-500/10 duration-[2000ms] delay-500" />
+            </div>
+            
+            <div className="relative flex flex-col items-center justify-center py-16 text-center z-10">
+              <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-br from-cyan-500/20 to-blue-600/20 ring-1 ring-white/10 backdrop-blur-md">
+                <Shield size={40} className="text-cyan-400 drop-shadow-[0_0_15px_rgba(34,211,238,0.5)]" />
+              </div>
+              <h3 className="text-xl font-bold text-white mb-2 tracking-tight">
+                SOCsentinel is Ready
+              </h3>
+              <p className="text-sm text-gray-400 max-w-sm mb-8">
+                The 6-agent AI pipeline is standing by. Generate a synthetic alert to watch the system triage, investigate, and respond in real-time.
               </p>
               <button
                 id="btn-generate-alert"
                 onClick={() => generateAndInvestigate.mutate()}
                 disabled={generateAndInvestigate.isPending}
-                className="mt-4 flex items-center gap-2 rounded-lg bg-gradient-to-r from-cyan-500 to-blue-600 px-4 py-2 text-sm font-medium text-white transition-all hover:shadow-lg hover:shadow-cyan-500/25 disabled:opacity-50"
+                className="group flex items-center gap-2 rounded-full bg-gradient-to-r from-cyan-500 to-blue-600 px-6 py-3 text-sm font-bold text-white transition-all hover:scale-105 hover:shadow-[0_0_30px_rgba(34,211,238,0.4)] disabled:scale-100 disabled:opacity-50"
               >
                 {generateAndInvestigate.isPending ? (
                   <>
-                    <RefreshCw size={16} className="animate-spin" />
+                    <RefreshCw size={18} className="animate-spin" />
                     Running Pipeline...
                   </>
                 ) : (
                   <>
-                    <Zap size={16} />
-                    Generate & Investigate Alert
+                    <Zap size={18} className="group-hover:animate-pulse" />
+                    Simulate Attack Scenario
                   </>
                 )}
               </button>
