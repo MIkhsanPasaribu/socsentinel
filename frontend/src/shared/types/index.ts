@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /** SOCsentinel — Shared TypeScript types for API responses. */
 
 export interface APIResponse<T = unknown> {
@@ -44,12 +45,13 @@ export interface Investigation {
   started_at: string;
   completed_at: string | null;
   orchestrator_result: Record<string, unknown> | null;
-  triage_result: Record<string, unknown> | null;
-  evidence_result: Record<string, unknown> | null;
-  mitre_result: Record<string, unknown> | null;
-  report_result: Record<string, unknown> | null;
-  escalation_result: Record<string, unknown> | null;
-  analyst_decision: Record<string, unknown> | null;
+  triage_result: Record<string, any> | null;
+  evidence_result: Record<string, any> | null;
+  mitre_result: Record<string, any> | null;
+  report_result: Record<string, any> | null;
+  response_result: Record<string, any> | null;
+  escalation_result: Record<string, any> | null;
+  analyst_decision: Record<string, any> | null;
   audit_trail: AuditEntry[];
   total_processing_time_ms: number;
 }
