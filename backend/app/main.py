@@ -104,6 +104,12 @@ def create_app() -> FastAPI:
     from app.features.pipeline.sse import router as sse_router
     from app.features.pipeline.decision import router as decision_router
     from app.features.pipeline.benchmark import router as benchmark_router
+    from app.features.detection.router import router as detection_router
+    from app.features.response_planner.router import router as response_planner_router
+    from app.features.validator.router import router as validator_router
+    from app.features.threat_generator.router import router as threat_generator_router
+    from app.features.threat_intel.router import router as threat_intel_router
+    from app.features.soar_integration.router import router as soar_router
 
     api_prefix = settings.api_v1_prefix
 
@@ -118,6 +124,12 @@ def create_app() -> FastAPI:
     app.include_router(sse_router, prefix=api_prefix)
     app.include_router(decision_router, prefix=api_prefix)
     app.include_router(benchmark_router, prefix=api_prefix)
+    app.include_router(detection_router, prefix=api_prefix)
+    app.include_router(response_planner_router, prefix=api_prefix)
+    app.include_router(validator_router, prefix=api_prefix)
+    app.include_router(threat_generator_router, prefix=api_prefix)
+    app.include_router(threat_intel_router, prefix=api_prefix)
+    app.include_router(soar_router, prefix=api_prefix)
 
     # Serve React frontend static files in production (HF Spaces)
     import os
