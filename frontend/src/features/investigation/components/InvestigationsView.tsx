@@ -1,7 +1,6 @@
 /** SOCsentinel — Investigation feature — Real-time SSE pipeline viewer. */
 
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
 import {
   Search,
   CheckCircle2,
@@ -14,14 +13,21 @@ import {
   Target,
   Zap,
   Loader2,
+  Radar,
+  ShieldCheck,
 } from "lucide-react";
-import { apiClient } from "../../../shared/lib/api";
 import { cn, getSeverityBadgeClass } from "../../../shared/lib/utils";
 import { ConfidenceBar } from "../../../shared/components/ConfidenceGauge";
 import { DecisionPanel } from "./DecisionPanel";
-import { useSSEInvestigation, type AgentStep } from "../hooks/useSSEInvestigation";
+import {
+  useSSEInvestigation,
+  type AgentStep,
+} from "../hooks/useSSEInvestigation";
 import { env } from "../../../core/config/env";
-import type { APIResponse, InvestigationSummary } from "../../../shared/types";
+import { ALERT_SCENARIOS } from "../../../core/constants/scenarios";
+import { useFormValidation } from "../../../shared/hooks/useFormValidation";
+import { scenarioSchema } from "../../../shared/lib/validation";
+import { useInvestigationList } from "../../../shared/hooks/useInvestigations";
 
 /** Agent step visualization for the SSE pipeline. */
 function AgentStepRow({ agent }: { agent: AgentStep }) {
@@ -30,6 +36,8 @@ function AgentStepRow({ agent }: { agent: AgentStep }) {
     l1_triage: Eye,
     evidence_collector: Search,
     mitre_mapper: Target,
+    threat_generator: Radar,
+    detection: ShieldCheck,
     report_writer: FileText,
     response_planner: Zap,
     validator: CheckCircle2,
@@ -70,7 +78,7 @@ function AgentStepRow({ agent }: { agent: AgentStep }) {
       className={cn(
         "flex items-center gap-4 rounded-xl border px-4 py-3 transition-all duration-500",
         s.border,
-        s.bg
+        s.bg,
       )}
     >
       {/* Icon */}
@@ -121,24 +129,25 @@ function AgentStepRow({ agent }: { agent: AgentStep }) {
 }
 
 export function InvestigationsView() {
-  const { state: sseState, startInvestigation, reset } = useSSEInvestigation(env.apiUrl);
+  const {
+    state: sseState,
+    startInvestigation,
+    reset,
+  } = useSSEInvestigation(env.apiUrl);
   const [selectedScenario, setSelectedScenario] = useState("brute_force");
+  const { errors, validate, clearErrors } = useFormValidation(scenarioSchema);
 
-  const { data: listData } = useQuery({
-    queryKey: ["investigations"],
-    queryFn: () => apiClient.get<APIResponse<InvestigationSummary[]>>("/pipeline/list"),
-    refetchInterval: 5000,
-  });
-
-  const investigations = (listData?.data?.data as InvestigationSummary[]) || [];
-  const completedCount = sseState.agents.filter((a) => a.status === "completed").length;
+  const { data: investigations = [] } = useInvestigationList(5000);
+  const completedCount = sseState.agents.filter(
+    (a) => a.status === "completed",
+  ).length;
   const avgConfidence =
     sseState.agents
       .filter((a) => a.confidence != null)
       .reduce((sum, a) => sum + (a.confidence || 0), 0) /
       (sseState.agents.filter((a) => a.confidence != null).length || 1) || null;
 
-  const scenarios = ["brute_force", "lateral_movement", "data_exfiltration", "phishing", "ransomware"];
+  const scenarios = ALERT_SCENARIOS;
 
   return (
     <div className="space-y-6">
@@ -153,7 +162,12 @@ export function InvestigationsView() {
         <div className="flex items-center gap-2">
           <select
             value={selectedScenario}
-            onChange={(e) => setSelectedScenario(e.target.value)}
+            onChange={(e) => {
+              setSelectedScenario(e.target.value);
+              if (Object.keys(errors).length) {
+                clearErrors();
+              }
+            }}
             className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs text-gray-300 outline-none focus:border-cyan-500/30"
           >
             {scenarios.map((s) => (
@@ -164,18 +178,33 @@ export function InvestigationsView() {
           </select>
           <button
             onClick={() => {
+              if (!validate(selectedScenario)) {
+                return;
+              }
               reset();
-              setTimeout(() => startInvestigation(selectedScenario), 100);
+              setTimeout(
+                () => startInvestigation(selectedScenario, false),
+                100,
+              );
             }}
-            disabled={sseState.phase === "streaming" || sseState.phase === "connecting"}
+            disabled={
+              sseState.phase === "streaming" || sseState.phase === "connecting"
+            }
             className="flex items-center gap-2 rounded-lg bg-gradient-to-r from-cyan-500 to-blue-600 px-4 py-2 text-sm font-medium text-white transition-all hover:shadow-lg hover:shadow-cyan-500/25 disabled:opacity-50"
           >
             {sseState.phase === "streaming" ? (
-              <><Loader2 size={16} className="animate-spin" /> Streaming...</>
+              <>
+                <Loader2 size={16} className="animate-spin" /> Streaming...
+              </>
             ) : (
-              <><Zap size={16} /> Stream Investigation</>
+              <>
+                <Zap size={16} /> Stream Investigation
+              </>
             )}
           </button>
+          {errors._global && (
+            <p className="text-xs text-orange-300">{errors._global}</p>
+          )}
         </div>
       </div>
 
@@ -194,7 +223,9 @@ export function InvestigationsView() {
                 {sseState.investigationId}
               </span>
               {sseState.ruleName && (
-                <span className="text-xs text-gray-400">{sseState.ruleName}</span>
+                <span className="text-xs text-gray-400">
+                  {sseState.ruleName}
+                </span>
               )}
             </div>
 
@@ -210,13 +241,13 @@ export function InvestigationsView() {
                         ? "bg-green-500"
                         : a.status === "running"
                           ? "bg-cyan-400 animate-pulse"
-                          : "bg-white/10"
+                          : "bg-white/10",
                     )}
                   />
                 ))}
               </div>
               <span className="text-xs text-gray-400">
-                {completedCount}/7 agents
+                {completedCount}/{sseState.agents.length} agents
               </span>
             </div>
           </div>
@@ -278,9 +309,12 @@ export function InvestigationsView() {
                 <span className={getSeverityBadgeClass(inv.severity)}>
                   {inv.severity.toUpperCase()}
                 </span>
-                <span className="font-mono text-gray-400">{inv.investigation_id}</span>
+                <span className="font-mono text-gray-400">
+                  {inv.investigation_id}
+                </span>
                 <span className="flex items-center gap-1 text-gray-500">
-                  <Clock size={12} /> {inv.processing_time_ms?.toFixed(0) || "?"}ms
+                  <Clock size={12} />{" "}
+                  {inv.processing_time_ms?.toFixed(0) || "?"}ms
                 </span>
                 <span className="ml-auto flex items-center gap-1 text-green-400">
                   <CheckCircle2 size={12} /> {inv.status}
@@ -297,7 +331,8 @@ export function InvestigationsView() {
           <Search size={48} className="mb-4 text-gray-600" />
           <p className="text-sm text-gray-500">No investigations yet</p>
           <p className="mt-1 text-xs text-gray-600">
-            Select a scenario and click "Stream Investigation" to watch agents work in real-time
+            Select a scenario and click "Stream Investigation" to watch agents
+            work in real-time
           </p>
         </div>
       )}

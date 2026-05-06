@@ -11,6 +11,8 @@ import {
 } from "lucide-react";
 import { apiClient } from "../../../shared/lib/api";
 import { ConfidenceGauge } from "../../../shared/components/ConfidenceGauge";
+import { useFormValidation } from "../../../shared/hooks/useFormValidation";
+import { decisionSchema } from "../../../shared/lib/validation";
 import type { APIResponse } from "../../../shared/types";
 
 type Decision = "approve" | "escalate" | "reject";
@@ -30,6 +32,7 @@ export function DecisionPanel({
 }: DecisionPanelProps) {
   const [notes, setNotes] = useState("");
   const [decided, setDecided] = useState<Decision | null>(null);
+  const { errors, validate, clearErrors } = useFormValidation(decisionSchema);
   const queryClient = useQueryClient();
 
   const decisionMutation = useMutation({
@@ -40,17 +43,42 @@ export function DecisionPanel({
       }),
     onSuccess: (_, decision) => {
       setDecided(decision);
+      clearErrors();
       queryClient.invalidateQueries({ queryKey: ["investigations"] });
       queryClient.invalidateQueries({ queryKey: ["pipeline-stats"] });
       onDecisionMade?.(decision);
     },
   });
 
+  /** Validate and submit analyst decision. */
+  const handleDecision = (decision: Decision) => {
+    const payload = { decision, notes: notes.trim() || undefined };
+    if (!validate(payload)) {
+      return;
+    }
+    decisionMutation.mutate(decision);
+  };
+
   if (decided) {
-    const labels: Record<Decision, { text: string; color: string; icon: typeof CheckCircle2 }> = {
-      approve: { text: "Response Approved", color: "text-green-400", icon: CheckCircle2 },
-      escalate: { text: "Escalated to L3", color: "text-orange-400", icon: AlertTriangle },
-      reject: { text: "Investigation Rejected", color: "text-red-400", icon: XCircle },
+    const labels: Record<
+      Decision,
+      { text: string; color: string; icon: typeof CheckCircle2 }
+    > = {
+      approve: {
+        text: "Response Approved",
+        color: "text-green-400",
+        icon: CheckCircle2,
+      },
+      escalate: {
+        text: "Escalated to L3",
+        color: "text-orange-400",
+        icon: AlertTriangle,
+      },
+      reject: {
+        text: "Investigation Rejected",
+        color: "text-red-400",
+        icon: XCircle,
+      },
     };
     const d = labels[decided];
     const Icon = d.icon;
@@ -100,31 +128,39 @@ export function DecisionPanel({
         </label>
         <textarea
           value={notes}
-          onChange={(e) => setNotes(e.target.value)}
+          onChange={(e) => {
+            setNotes(e.target.value);
+            if (Object.keys(errors).length) {
+              clearErrors();
+            }
+          }}
           placeholder="Add investigation notes, observations, or reasoning..."
           rows={2}
           className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs text-gray-300 placeholder-gray-600 outline-none transition-colors focus:border-cyan-500/30 focus:bg-white/[0.07]"
         />
+        {errors.notes && (
+          <p className="mt-1 text-xs text-orange-300">{errors.notes}</p>
+        )}
       </div>
 
       {/* Decision Buttons */}
       <div className="flex gap-3">
         <button
-          onClick={() => decisionMutation.mutate("approve")}
+          onClick={() => handleDecision("approve")}
           disabled={decisionMutation.isPending}
           className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-green-500/10 border border-green-500/30 px-4 py-2.5 text-sm font-medium text-green-400 transition-all hover:bg-green-500/20 hover:shadow-lg hover:shadow-green-500/10 disabled:opacity-50"
         >
           <CheckCircle2 size={16} /> Approve Response
         </button>
         <button
-          onClick={() => decisionMutation.mutate("escalate")}
+          onClick={() => handleDecision("escalate")}
           disabled={decisionMutation.isPending}
           className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-orange-500/10 border border-orange-500/30 px-4 py-2.5 text-sm font-medium text-orange-400 transition-all hover:bg-orange-500/20 hover:shadow-lg hover:shadow-orange-500/10 disabled:opacity-50"
         >
           <AlertTriangle size={16} /> Escalate to L3
         </button>
         <button
-          onClick={() => decisionMutation.mutate("reject")}
+          onClick={() => handleDecision("reject")}
           disabled={decisionMutation.isPending}
           className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-red-500/10 border border-red-500/30 px-4 py-2.5 text-sm font-medium text-red-400 transition-all hover:bg-red-500/20 hover:shadow-lg hover:shadow-red-500/10 disabled:opacity-50"
         >
