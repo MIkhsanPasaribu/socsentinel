@@ -36,6 +36,7 @@ class InvestigationStatus(str, Enum):
     COLLECTING_EVIDENCE = "collecting_evidence"
     MAPPING_MITRE = "mapping_mitre"
     GENERATING_REPORT = "generating_report"
+    VALIDATING = "validating"
     COMPLETED = "completed"
     FAILED = "failed"
 
@@ -131,6 +132,7 @@ class PipelineState(BaseModel):
     mitre_result: dict | None = None
     report_result: dict | None = None
     response_result: dict | None = None
+    validator_result: dict | None = None
 
     # Escalation & Human Decision
     escalation_result: dict | None = None
