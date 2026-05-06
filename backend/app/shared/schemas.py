@@ -35,7 +35,10 @@ class InvestigationStatus(str, Enum):
     TRIAGING = "triaging"
     COLLECTING_EVIDENCE = "collecting_evidence"
     MAPPING_MITRE = "mapping_mitre"
+    GENERATING_THREAT_SCENARIO = "generating_threat_scenario"
+    GENERATING_DETECTION = "generating_detection"
     GENERATING_REPORT = "generating_report"
+    GENERATING_RESPONSE = "generating_response"
     VALIDATING = "validating"
     COMPLETED = "completed"
     FAILED = "failed"
@@ -130,6 +133,8 @@ class PipelineState(BaseModel):
     triage_result: dict | None = None
     evidence_result: dict | None = None
     mitre_result: dict | None = None
+    threat_scenario: dict | None = None
+    detection_result: dict | None = None
     report_result: dict | None = None
     response_result: dict | None = None
     validator_result: dict | None = None
