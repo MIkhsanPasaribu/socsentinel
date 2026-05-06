@@ -11,12 +11,14 @@ import {
   Clock,
   CheckCircle2,
   Zap,
+  Code,
 } from "lucide-react";
 import { useState } from "react";
 import {
   getSeverityBadgeClass,
   formatRelativeTime,
   formatConfidence,
+  cn,
 } from "../../../shared/lib/utils";
 import { useInvestigationsFull } from "../../../shared/hooks/useInvestigations";
 import type { Investigation } from "../../../shared/types";
@@ -28,6 +30,7 @@ function ReportCard({ investigation }: { investigation: Investigation }) {
   const triage = investigation.triage_result;
   const evidence = investigation.evidence_result;
   const response = investigation.response_result;
+  const validator = investigation.validator_result;
 
   return (
     <div className="glass-card animate-slide-up overflow-hidden transition-all">
@@ -227,6 +230,69 @@ function ReportCard({ investigation }: { investigation: Investigation }) {
                   ))}
                 </div>
               </div>
+            </div>
+          )}
+
+          {/* Validator (Critic) Audit & Sigma Rule */}
+          {validator && (
+            <div className="space-y-4">
+              {/* Validation Status */}
+              <div>
+                <h4 className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-purple-400">
+                  <Shield size={14} /> Adversarial Audit
+                </h4>
+                <div className={cn(
+                  "rounded-lg border p-3",
+                  validator.is_approved 
+                    ? "border-green-500/20 bg-green-500/5" 
+                    : "border-red-500/20 bg-red-500/5"
+                )}>
+                  <div className="mb-2 flex items-center justify-between">
+                    <span className={cn(
+                      "text-sm font-semibold",
+                      validator.is_approved ? "text-green-400" : "text-red-400"
+                    )}>
+                      {validator.is_approved ? "Playbook Approved" : "Playbook Rejected"}
+                    </span>
+                    <span className="rounded bg-white/10 px-2 py-0.5 text-[10px] font-medium text-gray-300">
+                      Risk Score: {validator.risk_score}
+                    </span>
+                  </div>
+                  <p className="text-xs leading-relaxed text-gray-300">
+                    {validator.critic_comments}
+                  </p>
+                  
+                  {validator.safe_alternatives && validator.safe_alternatives.length > 0 && (
+                    <div className="mt-3 border-t border-white/10 pt-2">
+                      <p className="mb-1 text-[10px] uppercase text-gray-500">Safer Alternatives:</p>
+                      <ul className="space-y-1">
+                        {validator.safe_alternatives.map((alt: string, i: number) => (
+                          <li key={i} className="flex items-start gap-2 text-xs text-orange-400">
+                            <span className="mt-0.5 text-orange-500">→</span> {alt}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Sigma Rule Generation */}
+              {validator.sigma_rule && (
+                <div>
+                  <h4 className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-yellow-400">
+                    <Code size={14} /> On-The-Fly Detection Engineering (Sigma)
+                  </h4>
+                  <div className="rounded-lg border border-yellow-500/20 bg-black/40 p-0 overflow-hidden">
+                    <div className="bg-yellow-500/10 px-3 py-1.5 border-b border-yellow-500/20 flex items-center justify-between">
+                      <span className="text-[10px] font-mono text-yellow-500">sigma_rule.yml</span>
+                    </div>
+                    <pre className="p-3 text-xs text-yellow-100 overflow-x-auto font-mono whitespace-pre-wrap">
+                      {validator.sigma_rule}
+                    </pre>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>

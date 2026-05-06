@@ -27,6 +27,7 @@ from app.features.report_writer.service import generate_report
 from app.features.response_planner.service import generate_playbook
 from app.features.pipeline.service import _pipeline_store
 from app.features.alerts.generator import generate_alert
+from app.features.validator.service import validate_playbook
 
 logger = get_logger(__name__)
 
@@ -61,7 +62,7 @@ async def _stream_investigation(alert: AlertInput) -> AsyncGenerator[str, None]:
         "alert_id": alert.alert_id,
         "severity": alert.severity.value,
         "rule_name": alert.rule_name,
-        "total_agents": 6,
+        "total_agents": 7,
     })
 
     agents = [
@@ -122,7 +123,18 @@ async def _stream_investigation(alert: AlertInput) -> AsyncGenerator[str, None]:
                 mitre_result=state.mitre_result or {},
                 report_result=state.report_result or {},
             ),
-            "status": InvestigationStatus.GENERATING_REPORT, # Using same status for now or could add new one
+            "status": InvestigationStatus.GENERATING_REPORT,
+        },
+        {
+            "step": "validator",
+            "name": "Adversarial Validator",
+            "role": "Red Teamer / Critic",
+            "model": "Qwen3-7B",
+            "fn": lambda: validate_playbook(
+                alert_data=alert.model_dump(),
+                playbook_result=state.response_result or {},
+            ),
+            "status": InvestigationStatus.VALIDATING,
         },
     ]
 
@@ -162,6 +174,8 @@ async def _stream_investigation(alert: AlertInput) -> AsyncGenerator[str, None]:
                 state.report_result = result
             elif agent["step"] == "response_planner":
                 state.response_result = result
+            elif agent["step"] == "validator":
+                state.validator_result = result
 
             # Add audit entry
             state.audit_trail.append({
@@ -217,7 +231,7 @@ async def _stream_investigation(alert: AlertInput) -> AsyncGenerator[str, None]:
             "investigation_id": investigation_id,
             "status": "completed",
             "total_processing_time_ms": state.total_processing_time_ms,
-            "agents_completed": 6,
+            "agents_completed": 7,
         })
 
     except Exception as e:
