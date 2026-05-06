@@ -145,6 +145,47 @@ class MockChatModel(BaseChatModel):
                 ],
                 "confidence": 0.87
             })
+        elif "detection" in identity or "sigma" in identity:
+            return json.dumps({
+                "alert_id": "ALERT-MOCK-001",
+                "sigma_rule": "title: Potential Brute Force Attack\nname: potential_brute_force\nstatus: stable\nlevel: high\ndescription: Detects multiple failed authentication attempts from same source within 5 minutes\ntags:\n  - attack.credential_access\n  - attack.T1110\nlogsource:\n  product: windows\n  service: security\ndetection:\n  selection:\n    EventID: 4625\n  condition: selection | count(IpAddress) by AccountName > 5\nfields:\n  - AccountName\n  - IpAddress\n  - LogonType\nfalsepositives:\n  - Enterprise applications with shared accounts\n  - VPN misconfigurations\nlevel: high",
+                "mitre_techniques_mapped": ["T1110", "T1110.001"],
+                "detection_logic": "Counts failed logon events (EventID 4625) per account and flags when more than 5 failures occur from the same IP within the detection window.",
+                "confidence": 0.89,
+                "false_positive_risk": "medium",
+                "recommended_log_sources": ["Windows Security Event Log", "Sysmon"]
+            })
+        elif "validator" in identity or "critic" in identity:
+            return json.dumps({
+                "is_approved": True,
+                "risk_score": 0.22,
+                "critic_comments": "Containment actions are low-risk and scoped. Playbook is approved with monitoring follow-ups.",
+                "safe_alternatives": [],
+                "sigma_rule": ""
+            })
+        elif "threat" in identity and "scenario" in identity:
+            return json.dumps({
+                "scenario_name": "Credential Access Campaign",
+                "threat_group": "generic",
+                "intent": "Obtain valid credentials for lateral movement",
+                "attack_chain": [
+                    {
+                        "step": 1,
+                        "phase": "credential_access",
+                        "technique_id": "T1110",
+                        "technique_name": "Brute Force",
+                        "description": "The attacker attempts repeated logins against exposed services.",
+                        "expected_telemetry": ["Repeated failed login events"],
+                        "detection_opportunity": "Monitor authentication failures by source IP"
+                    }
+                ],
+                "iocs": [
+                    {"type": "ip", "value": "203.0.113.42", "role": "brute_force_source"}
+                ],
+                "simulation_commands": ["hydra -l admin -P passwords.txt ssh://target"],
+                "detection_difficulty": "easy",
+                "confidence": 0.82
+            })
         else:
             return json.dumps({
                 "response": "Mock response for development",
@@ -228,3 +269,9 @@ def get_report_llm(settings: Settings | None = None) -> BaseChatModel:
     """Get LLM client configured for the Report Writer agent (Qwen3-14B)."""
     s = settings or get_settings()
     return create_llm_client(model_name=s.qwen3_14b_model, settings=s)
+
+
+def get_detection_llm(settings: Settings | None = None) -> BaseChatModel:
+    """Get LLM client configured for the Detection agent (Qwen3-7B)."""
+    s = settings or get_settings()
+    return create_llm_client(model_name=s.qwen3_7b_model, settings=s)
