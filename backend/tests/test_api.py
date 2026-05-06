@@ -55,6 +55,98 @@ async def test_pipeline_demo_endpoint():
 
 
 @pytest.mark.asyncio
+async def test_detection_endpoint():
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.post(
+            "/api/v1/detection/generate",
+            json={
+                "alert_data": {"alert_id": "ALERT-MOCK-001"},
+                "mitre_result": {"techniques": [{"technique_id": "T1110"}]},
+                "evidence_result": {"iocs": []},
+            },
+        )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["success"] is True
+    assert "sigma_rule" in data["data"]
+
+
+@pytest.mark.asyncio
+async def test_response_planner_endpoint():
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.post(
+            "/api/v1/response-planner/generate",
+            json={
+                "alert_data": {"alert_id": "ALERT-MOCK-001"},
+                "triage_result": {"classification": "investigate"},
+                "evidence_result": {"iocs": []},
+                "mitre_result": {"techniques": []},
+                "report_result": {"title": "Mock"},
+            },
+        )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["success"] is True
+    assert data["data"]["playbook_name"]
+
+
+@pytest.mark.asyncio
+async def test_validator_endpoint():
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.post(
+            "/api/v1/validator/validate",
+            json={
+                "alert_data": {"alert_id": "ALERT-MOCK-001"},
+                "playbook_result": {"playbook_name": "Mock"},
+            },
+        )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["success"] is True
+    assert "is_approved" in data["data"]
+
+
+@pytest.mark.asyncio
+async def test_threat_generator_endpoint():
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.post(
+            "/api/v1/threat-generator/generate",
+            json={
+                "technique_id": "T1110",
+                "apt_group": "generic",
+                "target_sector": "general",
+                "include_threat_intel": False,
+            },
+        )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["success"] is True
+    assert data["data"]["scenario_name"]
+
+
+@pytest.mark.asyncio
+async def test_soar_export_endpoint():
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.post(
+            "/api/v1/soar/export",
+            json={
+                "platform": "generic",
+                "investigation_id": "INV-MOCK-001",
+                "payload": {"alert": {"severity": "low"}},
+            },
+        )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["success"] is True
+    assert data["data"]["platform"] == "generic"
+
+
+@pytest.mark.asyncio
 async def test_pipeline_list_endpoint():
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:

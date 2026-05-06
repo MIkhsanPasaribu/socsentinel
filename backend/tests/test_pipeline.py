@@ -9,7 +9,7 @@ from app.features.pipeline.service import run_investigation, get_investigation, 
 
 @pytest.mark.asyncio
 async def test_full_pipeline_brute_force():
-    """Test full 5-agent pipeline with brute force scenario."""
+    """Test full pipeline with brute force scenario."""
     alert = generate_alert("brute_force")
     state = await run_investigation(alert)
 
@@ -19,9 +19,12 @@ async def test_full_pipeline_brute_force():
     assert state.triage_result is not None
     assert state.evidence_result is not None
     assert state.mitre_result is not None
+    assert state.detection_result is not None
     assert state.report_result is not None
-    # 5 agent steps + 1-2 escalation entries
-    assert len(state.audit_trail) >= 6
+    assert state.response_result is not None
+    assert state.validator_result is not None
+    # 8 agent steps + escalation entries
+    assert len(state.audit_trail) >= 9
     assert state.total_processing_time_ms > 0
 
 
@@ -32,6 +35,7 @@ async def test_full_pipeline_ransomware():
     state = await run_investigation(alert)
 
     assert state.status.value == "completed"
+    assert state.detection_result is not None
     assert state.report_result is not None
     assert state.report_result.get("_agent") == "Report Writer"
 
@@ -47,7 +51,10 @@ async def test_pipeline_audit_trail():
     assert "L1 Triage" in agents
     assert "Evidence Collector" in agents
     assert "MITRE Mapper" in agents
+    assert "Detection" in agents
     assert "Report Writer" in agents
+    assert "Response Planner" in agents
+    assert "Validator" in agents
 
     for entry in state.audit_trail:
         assert entry["status"] == "completed"

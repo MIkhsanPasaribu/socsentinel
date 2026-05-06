@@ -28,6 +28,10 @@ aiohttp>=3.10.0
 numpy>=1.26.0
 pandas>=2.2.0
 
+# === Threat Intel (STIX/TAXII) ===
+stix2>=3.0.1
+taxii2-client>=2.3.0
+
 # === Logging & Observability ===
 structlog>=24.0.0
 
