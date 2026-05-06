@@ -50,6 +50,7 @@ export interface Investigation {
   mitre_result: Record<string, any> | null;
   report_result: Record<string, any> | null;
   response_result: Record<string, any> | null;
+  validator_result: Record<string, any> | null;
   escalation_result: Record<string, any> | null;
   analyst_decision: Record<string, any> | null;
   audit_trail: AuditEntry[];

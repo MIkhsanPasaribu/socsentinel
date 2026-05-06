@@ -32,6 +32,7 @@ function AgentStepRow({ agent }: { agent: AgentStep }) {
     mitre_mapper: Target,
     report_writer: FileText,
     response_planner: Zap,
+    validator: CheckCircle2,
   };
   const Icon = icons[agent.step] || Brain;
 
@@ -215,7 +216,7 @@ export function InvestigationsView() {
                 ))}
               </div>
               <span className="text-xs text-gray-400">
-                {completedCount}/6 agents
+                {completedCount}/7 agents
               </span>
             </div>
           </div>
