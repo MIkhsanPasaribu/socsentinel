@@ -10,13 +10,17 @@ app_port: 7860
 # 🛡️ SOCsentinel
 
 <p align="center">
+  <img src="assets/cover.png" alt="SOCsentinel Cover" width="860" />
+</p>
+
+<p align="center">
   <img src="assets/logo.png" alt="SOCsentinel Logo" width="120" />
 </p>
 
 <h3 align="center">Multi-Agent LLM Assistant for SOC Analysts</h3>
 
 <p align="center">
-  <em>Automating Level 1-3 SOC analyst workflows with 6 specialized AI agents powered by Qwen3 on AMD MI300X (ROCm).</em>
+  <em>Automating Level 1-3 SOC analyst workflows with 8 specialized AI agents powered by Qwen3 on AMD MI300X (ROCm).</em>
 </p>
 
 <p align="center">
@@ -49,7 +53,7 @@ Security Operation Centers face an unsustainable workload:
 │                    FastAPI Backend                        │
 │             /api/v1/* (Pydantic v2, LangChain)           │
 ├─────────────────────────────────────────────────────────┤
-│               6-Agent Investigation Pipeline             │
+│               8-Agent Investigation Pipeline             │
 │                                                         │
 │  ┌────────────┐  ┌──────────┐  ┌──────────┐  ┌────────┐ │
 │  │Orchestrator │→│L1 Triage │→│ Evidence │→│ MITRE  │ │
@@ -57,11 +61,15 @@ Security Operation Centers face an unsustainable workload:
 │  └────────────┘  └──────────┘  └──────────┘  │(Qwen3-7B)│ │
 │                                             └────┬─────┘ │
 │                                                  ↓       │
-│  ┌────────────────────┐                   ┌──────────┐  │
-│  │  Response Planner  │ ←─────────────── │  Report  │  │
-│  │   (Qwen3-14B)      │                   │  Writer  │  │
-│  └────────────────────┘                   │(Qwen3-14B)│  │
-│                                           └──────────┘  │
+│                                     ┌──────────────────┐ │
+│                                     │ Threat Generator │ │
+│                                     │  (optional)      │ │
+│                                     └──────┬───────────┘ │
+│                                            ↓             │
+│  ┌──────────┐  ┌──────────┐  ┌────────────────┐  ┌─────┐│
+│  │Detection │→│  Report  │→│ Response Planner │→│Validator││
+│  │(Qwen3-7B)│  │(Qwen3-14B)│ │   (Qwen3-14B)  │ │(Qwen3-7B)││
+│  └──────────┘  └──────────┘  └────────────────┘  └─────┘│
 ├─────────────────────────────────────────────────────────┤
 │  ChromaDB (MITRE ATT&CK RAG)  │  vLLM (AMD MI300X)    │
 └─────────────────────────────────────────────────────────┘
@@ -69,16 +77,19 @@ Security Operation Centers face an unsustainable workload:
 
 ## 🤖 Agent Specializations
 
-SOCsentinel deploys 6 specialized AI agents, each utilizing specific reasoning guardrails and Qwen3 models optimized for their workload:
+SOCsentinel deploys 8 specialized AI agents (plus an optional Threat Generator), each utilizing specific reasoning guardrails and Qwen3 models optimized for their workload:
 
-| Agent | Model | Role & Capability |
-|-------|-------|------|
-| **Orchestrator** | Qwen3-7B | Alert routing, priority assignment, and workflow coordination. |
-| **L1 Triage** | Qwen3-4B | False positive detection, severity scoring, and initial classification. |
-| **Evidence Collector** | Qwen3-7B | IOC enrichment, threat intel retrieval, and CVE correlation. |
-| **MITRE Mapper** | Qwen3-7B | ATT&CK technique mapping, kill chain analysis grounded by a ChromaDB Vector RAG. |
-| **Report Writer** | Qwen3-14B | Comprehensive investigation reporting and executive summaries. |
-| **Response Planner** | Qwen3-14B | Automatic generation of prioritized, step-by-step L3 containment playbooks. |
+| Agent                           | Model     | Role & Capability                                                                |
+| ------------------------------- | --------- | -------------------------------------------------------------------------------- |
+| **Orchestrator**                | Qwen3-7B  | Alert routing, priority assignment, and workflow coordination.                   |
+| **L1 Triage**                   | Qwen3-4B  | False positive detection, severity scoring, and initial classification.          |
+| **Evidence Collector**          | Qwen3-7B  | IOC enrichment, threat intel retrieval, and CVE correlation.                     |
+| **MITRE Mapper**                | Qwen3-7B  | ATT&CK technique mapping, kill chain analysis grounded by a ChromaDB Vector RAG. |
+| **Detection Agent**             | Qwen3-7B  | Sigma rule generation for SIEM detection coverage.                               |
+| **Report Writer**               | Qwen3-14B | Comprehensive investigation reporting and executive summaries.                   |
+| **Response Planner**            | Qwen3-14B | Automatic generation of prioritized, step-by-step L3 containment playbooks.      |
+| **Validator**                   | Qwen3-7B  | Adversarial safety review with risk scoring and optional Sigma validation.       |
+| **Threat Generator (Optional)** | Qwen3-7B  | Proactive attack scenario generation for hunting and purple team exercises.      |
 
 ## ✨ Key Features
 
@@ -86,6 +97,8 @@ SOCsentinel deploys 6 specialized AI agents, each utilizing specific reasoning g
 - **MITRE ATT&CK Heatmap**: A live, dynamic matrix visualizing technique density across all processed investigations to identify broader threat patterns.
 - **Qwen3 "Thinking Mode"**: A togglable feature that allows judges/analysts to peer inside the "brain" of the LLMs to see their Chain-of-Thought (CoT) reasoning logic directly in the audit trail.
 - **Threat Intel RAG**: Vector-grounded intelligence utilizing ChromaDB to parse and map over 697 MITRE techniques in real-time.
+- **Sigma Detection Rules**: Detection Agent outputs deployable Sigma YAML for SIEM platforms.
+- **SOAR Export**: Push investigation results to Splunk SOAR, Cortex XSOAR, or Microsoft Sentinel formats.
 - **Human-in-the-Loop (HITL)**: Enterprise-grade escalation engine where human analysts can approve, reject, or escalate the AI's proposed response playbooks.
 
 ## 🚀 Quick Start
@@ -133,21 +146,27 @@ pytest tests/ -v
 
 ## 📡 API Endpoints
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `GET` | `/health` | Health check |
-| `POST` | `/api/v1/alerts/generate` | Generate synthetic alert |
-| `POST` | `/api/v1/pipeline/investigate` | Run full 6-agent investigation |
-| `POST` | `/api/v1/pipeline/investigate-demo` | Demo with synthetic alert |
-| `GET` | `/api/v1/pipeline/stream-investigate` | SSE real-time pipeline stream |
-| `GET` | `/api/v1/pipeline/list` | List all investigations |
-| `GET` | `/api/v1/pipeline/status/{id}` | Get investigation status |
-| `GET` | `/api/v1/pipeline/stats` | Dashboard aggregate metrics |
-| `GET` | `/api/v1/pipeline/mitre-heatmap` | Aggregated MITRE technique density |
-| `POST` | `/api/v1/pipeline/decision/{id}` | Human-in-Loop decision |
-| `POST` | `/api/v1/pipeline/thinking-mode` | Toggle Qwen3 CoT reasoning |
+| Method | Endpoint                              | Description                        |
+| ------ | ------------------------------------- | ---------------------------------- |
+| `GET`  | `/health`                             | Health check                       |
+| `POST` | `/api/v1/alerts/generate`             | Generate synthetic alert           |
+| `POST` | `/api/v1/pipeline/investigate`        | Run full 8-agent investigation     |
+| `POST` | `/api/v1/pipeline/investigate-demo`   | Demo with synthetic alert          |
+| `GET`  | `/api/v1/pipeline/stream-investigate` | SSE real-time pipeline stream      |
+| `GET`  | `/api/v1/pipeline/list`               | List all investigations            |
+| `GET`  | `/api/v1/pipeline/status/{id}`        | Get investigation status           |
+| `GET`  | `/api/v1/pipeline/stats`              | Dashboard aggregate metrics        |
+| `GET`  | `/api/v1/pipeline/mitre-heatmap`      | Aggregated MITRE technique density |
+| `POST` | `/api/v1/pipeline/decision/{id}`      | Human-in-Loop decision             |
+| `POST` | `/api/v1/pipeline/thinking-mode`      | Toggle Qwen3 CoT reasoning         |
+| `POST` | `/api/v1/detection/generate`          | Generate Sigma detection rule      |
+| `POST` | `/api/v1/response-planner/generate`   | Generate response playbook         |
+| `POST` | `/api/v1/validator/validate`          | Validate response playbook         |
+| `POST` | `/api/v1/threat-generator/generate`   | Generate threat scenario           |
+| `POST` | `/api/v1/threat-intel/fetch`          | Fetch TAXII/STIX intel             |
+| `POST` | `/api/v1/soar/export`                 | Export investigation to SOAR       |
 
-*Interactive API docs available at `http://localhost:8000/docs`.*
+_Interactive API docs available at `http://localhost:8000/docs`._
 
 ## 🛡️ Security Features
 
@@ -171,19 +190,19 @@ pytest tests/ -v
 
 ## 🔧 Tech Stack
 
-| Layer | Technology |
-|-------|-----------|
-| **LLM** | Qwen3 (4B/7B/14B) via vLLM on AMD MI300X |
-| **Backend** | FastAPI, Pydantic v2, LangChain |
-| **Frontend** | React 18, TypeScript, Vite, TailwindCSS |
-| **RAG** | ChromaDB + MITRE ATT&CK Enterprise Matrix |
-| **SIEM** | Wazuh (webhook integration) + Synthetic generator |
-| **Infra** | AMD ROCm, Docker, Hugging Face Spaces |
+| Layer        | Technology                                        |
+| ------------ | ------------------------------------------------- |
+| **LLM**      | Qwen3 (4B/7B/14B) via vLLM on AMD MI300X          |
+| **Backend**  | FastAPI, Pydantic v2, LangChain                   |
+| **Frontend** | React 18, TypeScript, Vite, TailwindCSS           |
+| **RAG**      | ChromaDB + MITRE ATT&CK Enterprise Matrix         |
+| **SIEM**     | Wazuh (webhook integration) + Synthetic generator |
+| **Infra**    | AMD ROCm, Docker, Hugging Face Spaces             |
 
 ## 🏆 Hackathon Targets
 
 - **Grand Prize** — End-to-end multi-agent SOC platform.
-- **Track 1: AI Agents** — 6 specialized, coordinated agents utilizing RAG and HITL workflows.
+- **Track 1: AI Agents** — 8 specialized, coordinated agents utilizing RAG and HITL workflows.
 - **Hugging Face Special Prize** — Prepared for HF Spaces deployment.
 - **Build in Public** — Open development process.
 
@@ -193,4 +212,4 @@ MIT
 
 ---
 
-*Built with ❤️ for the [AMD Developer Hackathon 2026](https://hackathon.amd.com)*
+_Built with ❤️ for the [AMD Developer Hackathon 2026](https://hackathon.amd.com)_

@@ -34,6 +34,7 @@ backend/data/chroma_db/
 # === Data (large files) ===
 data/mitre_attack/enterprise-attack.json
 data/chroma_db/
+data/test_chroma_db/
 
 # === Misc ===
 *.bak
