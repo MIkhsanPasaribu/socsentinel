@@ -68,6 +68,20 @@ class Settings(BaseSettings):
         description="NVD API base URL",
     )
 
+    # === Threat Intel (TAXII/STIX) ===
+    taxii_server_url: str = Field(
+        default="", description="TAXII 2.1 server URL"
+    )
+    taxii_api_root: str = Field(
+        default="", description="TAXII API root or index"
+    )
+    taxii_collection_id: str = Field(
+        default="", description="TAXII collection ID"
+    )
+    taxii_token: str = Field(
+        default="", description="Optional TAXII bearer token"
+    )
+
     # === Observability ===
     log_level: str = Field(default="INFO", description="Logging level")
 
