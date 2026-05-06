@@ -21,6 +21,7 @@ async def generate_report(
     triage_result: dict | None = None,
     evidence_result: dict | None = None,
     mitre_result: dict | None = None,
+    detection_result: dict | None = None,
 ) -> dict[str, Any]:
     """Generate an investigation report from all agent outputs.
 
@@ -29,6 +30,7 @@ async def generate_report(
         triage_result: Output from L1 Triage agent.
         evidence_result: Output from Evidence Collector agent.
         mitre_result: Output from MITRE Mapper agent.
+        detection_result: Output from Detection agent (Sigma rules).
 
     Returns:
         Structured investigation report dict.
@@ -42,6 +44,7 @@ async def generate_report(
         "triage_analysis": triage_result or {},
         "evidence_collection": evidence_result or {},
         "mitre_mapping": mitre_result or {},
+        "detection_rules": detection_result or {},
     }
 
     user_message = (
