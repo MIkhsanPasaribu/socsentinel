@@ -21,6 +21,7 @@ from app.features.evidence.service import collect_evidence
 from app.features.mitre_mapper.service import map_to_attack
 from app.features.report_writer.service import generate_report
 from app.features.response_planner.service import generate_playbook
+from app.features.validator.service import validate_playbook
 
 logger = get_logger(__name__)
 
@@ -168,6 +169,15 @@ async def run_investigation(alert: AlertInput) -> PipelineState:
         )
         state.response_result = response_result
         _add_audit_entry(state, "response_planner", response_result)
+
+        # Step 7: Validator (Critic)
+        state.status = InvestigationStatus.VALIDATING
+        validator_result = await validate_playbook(
+            alert_data=alert.model_dump(),
+            playbook_result=response_result,
+        )
+        state.validator_result = validator_result
+        _add_audit_entry(state, "validator", validator_result)
 
         # Complete
         state.status = InvestigationStatus.COMPLETED

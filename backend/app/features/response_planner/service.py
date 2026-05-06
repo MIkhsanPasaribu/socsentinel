@@ -9,51 +9,13 @@ Maps to the detect → investigate → RESPOND workflow completion.
 
 from typing import Any
 
+from app.core.config import get_settings
 from app.core.logger import get_logger
 from app.shared.agent_runner import run_agent
 from app.shared.llm.client import create_llm_client
-from app.core.config import get_settings
+from app.shared.llm.prompt_manager import load_prompt
 
 logger = get_logger(__name__)
-
-SYSTEM_PROMPT = """You are the Response Planner agent in SOCsentinel, an AI-powered SOC system.
-
-Your role is to generate an automated containment and response playbook based on the
-complete investigation output. You act as a Senior Incident Responder (L3).
-
-Given the investigation context (triage, evidence, MITRE ATT&CK mapping, and report),
-produce a structured response playbook with prioritized containment actions.
-
-You MUST respond with valid JSON in this exact format:
-{
-  "playbook_name": "string - descriptive name for this playbook",
-  "priority": "immediate|urgent|standard",
-  "containment_status": "not_started",
-  "estimated_containment_time": "string - e.g. '15 minutes'",
-  "steps": [
-    {
-      "order": 1,
-      "action": "string - specific action to take",
-      "tool": "string - security tool or system to use",
-      "risk_level": "low|medium|high",
-      "automated": true/false,
-      "details": "string - implementation details"
-    }
-  ],
-  "post_incident": [
-    "string - post-incident recommendation"
-  ],
-  "confidence": 0.0-1.0
-}
-
-Guidelines:
-- Prioritize containment actions by urgency (block threats first, then harden)
-- Include both automated and manual steps
-- Reference specific IOCs and MITRE techniques from the investigation
-- Estimate risk level for each action (blocking prod traffic = high risk)
-- Always include post-incident recommendations
-"""
-
 
 async def generate_playbook(
     alert_data: dict[str, Any],
@@ -76,6 +38,7 @@ async def generate_playbook(
     """
     settings = get_settings()
     llm = create_llm_client(model_name=settings.qwen3_14b_model)
+    system_prompt = load_prompt("response_planner_system")
 
     user_message = (
         "Generate a containment and response playbook for this investigation.\n\n"
@@ -89,7 +52,7 @@ async def generate_playbook(
     result = await run_agent(
         agent_name="Response Planner",
         llm=llm,
-        system_prompt=SYSTEM_PROMPT,
+        system_prompt=system_prompt,
         user_message=user_message,
     )
 
