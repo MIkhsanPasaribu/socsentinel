@@ -20,15 +20,24 @@ router = APIRouter(prefix="/pipeline", tags=["Investigation Pipeline"])
 
 
 @router.post("/investigate", response_model=APIResponse)
-async def investigate_endpoint(alert: AlertInput) -> APIResponse:
+async def investigate_endpoint(
+    alert: AlertInput,
+    include_threat_scenario: bool = False,
+    threat_technique_id: str | None = None,
+) -> APIResponse:
     """Run the full investigation pipeline on an alert.
 
     Executes: Orchestrator → L1 Triage → Evidence Collector →
-    MITRE Mapper → Report Writer.
+    MITRE Mapper → (optional Threat Scenario) → Detection → Report Writer →
+    Response Planner → Validator.
 
     Returns the complete pipeline state with all agent results.
     """
-    state = await run_investigation(alert)
+    state = await run_investigation(
+        alert,
+        include_threat_scenario=include_threat_scenario,
+        threat_technique_id=threat_technique_id,
+    )
     return APIResponse(
         success=True,
         message=f"Investigation {state.investigation_id} completed ({state.status.value})",
@@ -43,6 +52,8 @@ async def investigate_endpoint(alert: AlertInput) -> APIResponse:
 @router.post("/investigate-demo", response_model=APIResponse)
 async def investigate_demo_endpoint(
     scenario: str = "brute_force",
+    include_threat_scenario: bool = False,
+    threat_technique_id: str | None = None,
 ) -> APIResponse:
     """Run a demo investigation with a synthetic alert.
 
@@ -50,7 +61,11 @@ async def investigate_demo_endpoint(
     Great for demos and testing.
     """
     alert = generate_alert(scenario)
-    state = await run_investigation(alert)
+    state = await run_investigation(
+        alert,
+        include_threat_scenario=include_threat_scenario,
+        threat_technique_id=threat_technique_id,
+    )
     return APIResponse(
         success=True,
         message=f"Demo investigation {state.investigation_id} completed",

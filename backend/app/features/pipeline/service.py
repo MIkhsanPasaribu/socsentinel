@@ -2,7 +2,8 @@
 SOCsentinel — Investigation Pipeline service.
 
 Orchestrates the end-to-end investigation workflow:
-Alert → Orchestrator → L1 Triage → Evidence Collector → MITRE Mapper → Report Writer.
+Alert → Orchestrator → L1 Triage → Evidence Collector → MITRE Mapper →
+Threat Scenario (optional) → Detection → Report Writer → Response Planner → Validator.
 """
 
 import time
@@ -19,6 +20,8 @@ from app.features.orchestrator.service import route_alert
 from app.features.triage.service import classify_alert
 from app.features.evidence.service import collect_evidence
 from app.features.mitre_mapper.service import map_to_attack
+from app.features.detection.service import generate_detection
+from app.features.threat_generator.service import generate_threat_scenario
 from app.features.report_writer.service import generate_report
 from app.features.response_planner.service import generate_playbook
 from app.features.validator.service import validate_playbook
@@ -29,22 +32,50 @@ logger = get_logger(__name__)
 _pipeline_store: dict[str, PipelineState] = {}
 
 
-def _add_audit_entry(state: PipelineState, step: str, result: dict) -> None:
+def _add_audit_entry(
+    state: PipelineState,
+    step: str,
+    result: dict,
+    status: str = "completed",
+    extra: dict | None = None,
+) -> None:
     """Add an audit trail entry to the pipeline state."""
-    state.audit_trail.append({
+    entry = {
         "timestamp": datetime.utcnow().isoformat(),
         "step": step,
         "agent": result.get("_agent", step),
         "processing_time_ms": result.get("_processing_time_ms", 0),
         "confidence": result.get("confidence", None),
-        "status": "completed",
-    })
+        "status": status,
+    }
+    if extra:
+        entry.update(extra)
+    state.audit_trail.append(entry)
 
 
-async def run_investigation(alert: AlertInput) -> PipelineState:
+def select_threat_technique_id(
+    mitre_result: dict[str, Any],
+    override: str | None,
+) -> str | None:
+    """Pick a technique ID for threat scenario generation."""
+    if override:
+        return override
+    techniques = mitre_result.get("techniques", [])
+    for technique in techniques:
+        technique_id = technique.get("technique_id") or technique.get("id")
+        if technique_id:
+            return technique_id
+    return None
+
+
+async def run_investigation(
+    alert: AlertInput,
+    include_threat_scenario: bool = False,
+    threat_technique_id: str | None = None,
+) -> PipelineState:
     """Run the full investigation pipeline on an alert.
 
-    Executes all 5 agents sequentially, passing context from each
+    Executes all agents sequentially, passing context from each
     to the next. Records audit trail and timing throughout.
 
     Args:
@@ -126,6 +157,43 @@ async def run_investigation(alert: AlertInput) -> PipelineState:
         state.mitre_result = mitre_result
         _add_audit_entry(state, "mitre_mapper", mitre_result)
 
+        # Step 4.2: Threat Scenario Generation (optional)
+        if include_threat_scenario:
+            state.status = InvestigationStatus.GENERATING_THREAT_SCENARIO
+            selected_technique = select_threat_technique_id(
+                mitre_result,
+                threat_technique_id,
+            )
+            if selected_technique:
+                threat_result = await generate_threat_scenario(
+                    technique_id=selected_technique,
+                    apt_group="generic",
+                    additional_context={
+                        "source": "pipeline",
+                        "alert_id": alert.alert_id,
+                    },
+                )
+                state.threat_scenario = threat_result
+                _add_audit_entry(state, "threat_generator", threat_result)
+            else:
+                _add_audit_entry(
+                    state,
+                    "threat_generator",
+                    {"_agent": "Threat Generator", "confidence": None},
+                    status="skipped",
+                    extra={"reason": "no_technique_available"},
+                )
+
+        # Step 4.5: Detection Rule Generation
+        state.status = InvestigationStatus.GENERATING_DETECTION
+        detection_result = await generate_detection(
+            alert_data=alert.model_dump(),
+            mitre_result=mitre_result,
+            evidence_result=evidence_result,
+        )
+        state.detection_result = detection_result
+        _add_audit_entry(state, "detection", detection_result)
+
         # Re-evaluate escalation after MITRE mapping (L2 → L3)
         techniques = mitre_result.get("techniques", [])
         kill_chain = mitre_result.get("kill_chain_phase", "")
@@ -155,11 +223,13 @@ async def run_investigation(alert: AlertInput) -> PipelineState:
             triage_result=triage_result,
             evidence_result=evidence_result,
             mitre_result=mitre_result,
+            detection_result=detection_result,
         )
         state.report_result = report_result
         _add_audit_entry(state, "report_writer", report_result)
 
         # Step 6: Response Planner
+        state.status = InvestigationStatus.GENERATING_RESPONSE
         response_result = await generate_playbook(
             alert_data=alert.model_dump(),
             triage_result=triage_result,

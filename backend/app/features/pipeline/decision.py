@@ -9,7 +9,7 @@ from datetime import datetime
 from typing import Literal
 
 from fastapi import APIRouter
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 from app.core.logger import get_logger
 from app.shared.schemas import APIResponse, InvestigationStatus
@@ -25,6 +25,13 @@ class DecisionRequest(BaseModel):
     """Analyst decision on an investigation."""
     decision: Literal["approve", "escalate", "reject"]
     analyst_notes: str = ""
+
+    @model_validator(mode="after")
+    def validate_notes(self) -> "DecisionRequest":
+        """Require notes for escalation or rejection."""
+        if self.decision in {"escalate", "reject"} and not self.analyst_notes.strip():
+            raise ValueError("Analyst notes are required for escalation or rejection")
+        return self
 
 
 @router.post("/decision/{investigation_id}", response_model=APIResponse)

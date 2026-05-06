@@ -23,9 +23,11 @@ from app.features.orchestrator.service import route_alert
 from app.features.triage.service import classify_alert
 from app.features.evidence.service import collect_evidence
 from app.features.mitre_mapper.service import map_to_attack
+from app.features.detection.service import generate_detection
+from app.features.threat_generator.service import generate_threat_scenario
 from app.features.report_writer.service import generate_report
 from app.features.response_planner.service import generate_playbook
-from app.features.pipeline.service import _pipeline_store
+from app.features.pipeline.service import _pipeline_store, select_threat_technique_id
 from app.features.alerts.generator import generate_alert
 from app.features.validator.service import validate_playbook
 
@@ -40,7 +42,11 @@ def _sse_event(event_type: str, data: dict) -> str:
     return f"event: {event_type}\ndata: {payload}\n\n"
 
 
-async def _stream_investigation(alert: AlertInput) -> AsyncGenerator[str, None]:
+async def _stream_investigation(
+    alert: AlertInput,
+    include_threat_scenario: bool,
+    threat_technique_id: str | None,
+) -> AsyncGenerator[str, None]:
     """Run investigation pipeline with SSE streaming.
 
     Yields SSE events as each agent starts and completes.
@@ -62,8 +68,24 @@ async def _stream_investigation(alert: AlertInput) -> AsyncGenerator[str, None]:
         "alert_id": alert.alert_id,
         "severity": alert.severity.value,
         "rule_name": alert.rule_name,
-        "total_agents": 7,
+        "total_agents": 9 if include_threat_scenario else 8,
     })
+
+    async def _run_threat_scenario() -> dict:
+        selected_technique = select_threat_technique_id(
+            state.mitre_result or {},
+            threat_technique_id,
+        )
+        if not selected_technique:
+            return {"_agent": "Threat Generator", "confidence": None, "skipped": True}
+        return await generate_threat_scenario(
+            technique_id=selected_technique,
+            apt_group="generic",
+            additional_context={
+                "source": "sse",
+                "alert_id": alert.alert_id,
+            },
+        )
 
     agents = [
         {
@@ -98,6 +120,31 @@ async def _stream_investigation(alert: AlertInput) -> AsyncGenerator[str, None]:
             "fn": lambda: map_to_attack(alert, evidence_context=state.evidence_result),
             "status": InvestigationStatus.MAPPING_MITRE,
         },
+    ]
+
+    if include_threat_scenario:
+        agents.append({
+            "step": "threat_generator",
+            "name": "Threat Generator",
+            "role": "Threat Intelligence Analyst",
+            "model": "Qwen3-7B",
+            "fn": _run_threat_scenario,
+            "status": InvestigationStatus.GENERATING_THREAT_SCENARIO,
+        })
+
+    agents.extend([
+        {
+            "step": "detection",
+            "name": "Detection Agent",
+            "role": "Detection Engineer",
+            "model": "Qwen3-7B",
+            "fn": lambda: generate_detection(
+                alert_data=alert.model_dump(),
+                mitre_result=state.mitre_result or {},
+                evidence_result=state.evidence_result or {},
+            ),
+            "status": InvestigationStatus.GENERATING_DETECTION,
+        },
         {
             "step": "report_writer",
             "name": "Report Writer",
@@ -108,6 +155,7 @@ async def _stream_investigation(alert: AlertInput) -> AsyncGenerator[str, None]:
                 triage_result=state.triage_result or {},
                 evidence_result=state.evidence_result or {},
                 mitre_result=state.mitre_result or {},
+                detection_result=state.detection_result or {},
             ),
             "status": InvestigationStatus.GENERATING_REPORT,
         },
@@ -123,7 +171,7 @@ async def _stream_investigation(alert: AlertInput) -> AsyncGenerator[str, None]:
                 mitre_result=state.mitre_result or {},
                 report_result=state.report_result or {},
             ),
-            "status": InvestigationStatus.GENERATING_REPORT,
+            "status": InvestigationStatus.GENERATING_RESPONSE,
         },
         {
             "step": "validator",
@@ -136,7 +184,7 @@ async def _stream_investigation(alert: AlertInput) -> AsyncGenerator[str, None]:
             ),
             "status": InvestigationStatus.VALIDATING,
         },
-    ]
+    ])
 
     try:
         for i, agent in enumerate(agents):
@@ -170,6 +218,10 @@ async def _stream_investigation(alert: AlertInput) -> AsyncGenerator[str, None]:
                 state.evidence_result = result
             elif agent["step"] == "mitre_mapper":
                 state.mitre_result = result
+            elif agent["step"] == "threat_generator":
+                state.threat_scenario = result
+            elif agent["step"] == "detection":
+                state.detection_result = result
             elif agent["step"] == "report_writer":
                 state.report_result = result
             elif agent["step"] == "response_planner":
@@ -231,7 +283,7 @@ async def _stream_investigation(alert: AlertInput) -> AsyncGenerator[str, None]:
             "investigation_id": investigation_id,
             "status": "completed",
             "total_processing_time_ms": state.total_processing_time_ms,
-            "agents_completed": 7,
+            "agents_completed": len(agents),
         })
 
     except Exception as e:
@@ -256,7 +308,11 @@ async def _stream_investigation(alert: AlertInput) -> AsyncGenerator[str, None]:
 
 
 @router.get("/stream-investigate")
-async def stream_investigate_endpoint(scenario: str = "brute_force"):
+async def stream_investigate_endpoint(
+    scenario: str = "brute_force",
+    include_threat_scenario: bool = False,
+    threat_technique_id: str | None = None,
+):
     """Stream a demo investigation via Server-Sent Events.
 
     Generates a synthetic alert and streams real-time agent-by-agent
@@ -272,7 +328,7 @@ async def stream_investigate_endpoint(scenario: str = "brute_force"):
     alert = generate_alert(scenario)
 
     return StreamingResponse(
-        _stream_investigation(alert),
+        _stream_investigation(alert, include_threat_scenario, threat_technique_id),
         media_type="text/event-stream",
         headers={
             "Cache-Control": "no-cache",
@@ -283,10 +339,14 @@ async def stream_investigate_endpoint(scenario: str = "brute_force"):
 
 
 @router.post("/stream-investigate-alert")
-async def stream_investigate_alert_endpoint(alert: AlertInput):
+async def stream_investigate_alert_endpoint(
+    alert: AlertInput,
+    include_threat_scenario: bool = False,
+    threat_technique_id: str | None = None,
+):
     """Stream an investigation on a specific alert via SSE."""
     return StreamingResponse(
-        _stream_investigation(alert),
+        _stream_investigation(alert, include_threat_scenario, threat_technique_id),
         media_type="text/event-stream",
         headers={
             "Cache-Control": "no-cache",
