@@ -48,6 +48,8 @@ export interface Investigation {
   triage_result: Record<string, any> | null;
   evidence_result: Record<string, any> | null;
   mitre_result: Record<string, any> | null;
+  threat_scenario: Record<string, any> | null;
+  detection_result: Record<string, any> | null;
   report_result: Record<string, any> | null;
   response_result: Record<string, any> | null;
   validator_result: Record<string, any> | null;
