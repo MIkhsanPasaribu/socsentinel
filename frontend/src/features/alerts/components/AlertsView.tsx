@@ -2,21 +2,24 @@
 
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import {
-  Bell,
-  RefreshCw,
-  Clock,
-  Server,
-  ArrowRight,
-} from "lucide-react";
+import { Bell, RefreshCw, Clock, Server, ArrowRight } from "lucide-react";
 import { apiClient } from "../../../shared/lib/api";
 import {
   formatRelativeTime,
   getSeverityBadgeClass,
 } from "../../../shared/lib/utils";
+import { ALERT_SCENARIOS } from "../../../core/constants/scenarios";
+import { useFormValidation } from "../../../shared/hooks/useFormValidation";
+import { scenarioSchema } from "../../../shared/lib/validation";
 import type { Alert, APIResponse } from "../../../shared/types";
 
-function AlertCard({ alert, onInvestigate }: { alert: Alert; onInvestigate: (a: Alert) => void }) {
+function AlertCard({
+  alert,
+  onInvestigate,
+}: {
+  alert: Alert;
+  onInvestigate: (a: Alert) => void;
+}) {
   return (
     <div className="glass-card animate-slide-up flex items-start justify-between gap-4 transition-all hover:border-cyan-500/30">
       <div className="flex-1 space-y-2">
@@ -24,10 +27,14 @@ function AlertCard({ alert, onInvestigate }: { alert: Alert; onInvestigate: (a: 
           <span className={getSeverityBadgeClass(alert.severity)}>
             {alert.severity.toUpperCase()}
           </span>
-          <span className="font-mono text-xs text-gray-500">{alert.alert_id}</span>
+          <span className="font-mono text-xs text-gray-500">
+            {alert.alert_id}
+          </span>
         </div>
         <h3 className="text-sm font-semibold text-white">{alert.rule_name}</h3>
-        <p className="text-xs leading-relaxed text-gray-400">{alert.description}</p>
+        <p className="text-xs leading-relaxed text-gray-400">
+          {alert.description}
+        </p>
         <div className="flex flex-wrap gap-3 text-xs text-gray-500">
           <span className="flex items-center gap-1">
             <Server size={12} /> {alert.source_ip} → {alert.destination_ip}
@@ -52,10 +59,13 @@ function AlertCard({ alert, onInvestigate }: { alert: Alert; onInvestigate: (a: 
 export function AlertsView() {
   const queryClient = useQueryClient();
   const [investigating, setInvestigating] = useState<string | null>(null);
+  const { errors, validate, clearErrors } = useFormValidation(scenarioSchema);
 
   const generateMutation = useMutation({
     mutationFn: (scenario?: string) =>
-      apiClient.post<APIResponse<Alert>>(`/alerts/generate${scenario ? `?scenario=${scenario}` : ""}`),
+      apiClient.post<APIResponse<Alert>>(
+        `/alerts/generate${scenario ? `?scenario=${scenario}` : ""}`,
+      ),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["alerts"] }),
   });
 
@@ -71,6 +81,9 @@ export function AlertsView() {
   const [alerts, setAlerts] = useState<Alert[]>([]);
 
   const handleGenerate = async (scenario?: string) => {
+    if (scenario && !validate(scenario)) {
+      return;
+    }
     const res = await generateMutation.mutateAsync(scenario);
     if (res.data.data) {
       setAlerts((prev) => [res.data.data as Alert, ...prev]);
@@ -82,7 +95,7 @@ export function AlertsView() {
     await investigateMutation.mutateAsync(alert);
   };
 
-  const scenarios = ["brute_force", "lateral_movement", "data_exfiltration", "phishing", "ransomware"];
+  const scenarios = ALERT_SCENARIOS;
 
   return (
     <div className="space-y-6">
@@ -97,13 +110,19 @@ export function AlertsView() {
           {scenarios.map((s) => (
             <button
               key={s}
-              onClick={() => handleGenerate(s)}
+              onClick={() => {
+                clearErrors();
+                handleGenerate(s);
+              }}
               disabled={generateMutation.isPending}
               className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium text-gray-300 transition-all hover:border-cyan-500/30 hover:bg-cyan-500/10 hover:text-cyan-400 disabled:opacity-50"
             >
               {s.replace("_", " ")}
             </button>
           ))}
+          {errors._global && (
+            <p className="text-xs text-orange-300">{errors._global}</p>
+          )}
         </div>
       </div>
 
@@ -113,7 +132,9 @@ export function AlertsView() {
           <div className="glass-card flex flex-col items-center py-16 text-center">
             <Bell size={48} className="mb-4 text-gray-600" />
             <p className="text-sm text-gray-500">No alerts in queue</p>
-            <p className="mt-1 text-xs text-gray-600">Generate synthetic alerts using the buttons above</p>
+            <p className="mt-1 text-xs text-gray-600">
+              Generate synthetic alerts using the buttons above
+            </p>
           </div>
         ) : (
           alerts.map((alert) => (
@@ -132,8 +153,12 @@ export function AlertsView() {
           <div className="flex items-center gap-3">
             <RefreshCw size={18} className="animate-spin text-cyan-400" />
             <div>
-              <p className="text-sm font-medium text-white">Investigation in progress...</p>
-              <p className="text-xs text-gray-400">Running 5 agents on {investigating}</p>
+              <p className="text-sm font-medium text-white">
+                Investigation in progress...
+              </p>
+              <p className="text-xs text-gray-400">
+                Running multi-agent pipeline on {investigating}
+              </p>
             </div>
           </div>
         </div>
