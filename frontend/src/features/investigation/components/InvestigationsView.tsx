@@ -19,6 +19,7 @@ import {
 import { cn, getSeverityBadgeClass } from "../../../shared/lib/utils";
 import { ConfidenceBar } from "../../../shared/components/ConfidenceGauge";
 import { DecisionPanel } from "./DecisionPanel";
+import { PipelineFlowDiagram } from "./PipelineFlowDiagram";
 import {
   useSSEInvestigation,
   type AgentStep,
@@ -251,6 +252,14 @@ export function InvestigationsView() {
               </span>
             </div>
           </div>
+
+          {/* Pipeline Flow Diagram */}
+          <PipelineFlowDiagram
+            currentStep={sseState.agents.find((a) => a.status === "running")?.step}
+            completedSteps={sseState.agents
+              .filter((a) => a.status === "completed")
+              .map((a) => ({ step: a.step, processing_time_ms: a.processing_time_ms ?? undefined }))}
+          />
 
           {/* Agent steps */}
           <div className="space-y-2">

@@ -12,6 +12,9 @@ import {
   CheckCircle2,
   Zap,
   Code,
+  Download,
+  Copy,
+  Cpu,
 } from "lucide-react";
 import { useState } from "react";
 import {
@@ -23,12 +26,27 @@ import {
 import { useInvestigationsFull } from "../../../shared/hooks/useInvestigations";
 import type { Investigation } from "../../../shared/types";
 
+/** Download text content as a file. */
+function downloadAsFile(content: string, filename: string) {
+  const blob = new Blob([content], { type: "text/yaml;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
 function ReportCard({ investigation }: { investigation: Investigation }) {
   const [expanded, setExpanded] = useState(false);
+  const [copied, setCopied] = useState(false);
   const report = investigation.report_result;
   const mitre = investigation.mitre_result;
   const triage = investigation.triage_result;
   const evidence = investigation.evidence_result;
+  const detection = investigation.detection_result;
   const response = investigation.response_result;
   const validator = investigation.validator_result;
 
@@ -154,6 +172,95 @@ function ReportCard({ investigation }: { investigation: Investigation }) {
                 <p className="mt-2 text-xs text-gray-400">
                   <strong className="text-gray-300">Kill Chain Phase:</strong>{" "}
                   {mitre.kill_chain_phase}
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* Detection Engineering — Sigma Rule (from Detection Agent) */}
+          {detection?.sigma_rule && (
+            <div>
+              <h4 className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-yellow-400">
+                <Cpu size={14} /> Detection Engineering (Sigma Rule)
+              </h4>
+              <div className="rounded-lg border border-yellow-500/20 bg-black/40 overflow-hidden">
+                <div className="flex items-center justify-between border-b border-yellow-500/20 bg-yellow-500/10 px-3 py-1.5">
+                  <span className="font-mono text-[10px] text-yellow-500">
+                    detection_rule.yml
+                  </span>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(detection.sigma_rule);
+                        setCopied(true);
+                        setTimeout(() => setCopied(false), 2000);
+                      }}
+                      className="flex items-center gap-1 rounded bg-white/10 px-2 py-0.5 text-[10px] text-gray-300 transition-colors hover:bg-white/20 hover:text-white"
+                    >
+                      <Copy size={10} />
+                      {copied ? "Copied!" : "Copy"}
+                    </button>
+                    <button
+                      onClick={() => downloadAsFile(detection.sigma_rule, `sigma_rule_${investigation.investigation_id}.yml`)}
+                      className="flex items-center gap-1 rounded bg-yellow-500/20 px-2 py-0.5 text-[10px] text-yellow-400 transition-colors hover:bg-yellow-500/30 hover:text-yellow-300"
+                    >
+                      <Download size={10} />
+                      .yml
+                    </button>
+                  </div>
+                </div>
+                <pre className="overflow-x-auto whitespace-pre-wrap p-3 font-mono text-xs text-yellow-100">
+                  {detection.sigma_rule}
+                </pre>
+              </div>
+
+              {/* Detection metadata grid */}
+              <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                {detection.mitre_techniques_mapped && detection.mitre_techniques_mapped.length > 0 && (
+                  <div className="rounded-lg bg-white/5 p-2.5">
+                    <p className="text-[10px] uppercase text-gray-500">Techniques</p>
+                    <p className="text-xs font-semibold text-red-400">
+                      {detection.mitre_techniques_mapped.join(", ")}
+                    </p>
+                  </div>
+                )}
+                {detection.false_positive_risk && (
+                  <div className="rounded-lg bg-white/5 p-2.5">
+                    <p className="text-[10px] uppercase text-gray-500">FP Risk</p>
+                    <p className={cn(
+                      "text-xs font-semibold",
+                      detection.false_positive_risk === "high" ? "text-red-400" :
+                      detection.false_positive_risk === "medium" ? "text-orange-400" : "text-green-400"
+                    )}>
+                      {detection.false_positive_risk}
+                    </p>
+                  </div>
+                )}
+                {detection.confidence !== undefined && (
+                  <div className="rounded-lg bg-white/5 p-2.5">
+                    <p className="text-[10px] uppercase text-gray-500">Confidence</p>
+                    <p className="text-xs font-semibold text-cyan-400">
+                      {typeof detection.confidence === "number"
+                        ? `${(detection.confidence * 100).toFixed(0)}%`
+                        : detection.confidence}
+                    </p>
+                  </div>
+                )}
+                {detection.recommended_log_sources && detection.recommended_log_sources.length > 0 && (
+                  <div className="rounded-lg bg-white/5 p-2.5">
+                    <p className="text-[10px] uppercase text-gray-500">Log Sources</p>
+                    <p className="text-xs font-semibold text-gray-300">
+                      {detection.recommended_log_sources.join(", ")}
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Detection logic explanation */}
+              {detection.detection_logic && (
+                <p className="mt-2 rounded-lg bg-white/5 p-3 text-xs leading-relaxed text-gray-300">
+                  <strong className="text-gray-200">Detection Logic:</strong>{" "}
+                  {detection.detection_logic}
                 </p>
               )}
             </div>

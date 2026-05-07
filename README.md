@@ -8,14 +8,14 @@ app_port: 7860
 ---
 
 # 🛡️ SOCsentinel
-
-<p align="center">
-  <img src="assets/cover.png" alt="SOCsentinel Cover" width="860" />
-</p>
-
 <p align="center">
   <img src="assets/logo.png" alt="SOCsentinel Logo" width="120" />
 </p>
+
+<p align="center">
+  <img src="assets/cover 1.png" alt="SOCsentinel Cover" width="860" />
+</p>
+
 
 <h3 align="center">Multi-Agent LLM Assistant for SOC Analysts</h3>
 

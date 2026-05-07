@@ -6,6 +6,10 @@ export const ALERT_SCENARIOS = [
   "data_exfiltration",
   "phishing",
   "ransomware",
+  "privilege_escalation",
+  "supply_chain",
+  "insider_threat",
+  "cryptomining",
 ] as const;
 
 export type AlertScenario = (typeof ALERT_SCENARIOS)[number];

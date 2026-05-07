@@ -9,6 +9,7 @@ import {
   ClipboardList,
   Shield,
   Activity,
+  Crosshair,
 } from "lucide-react";
 import { cn } from "../../lib/utils";
 import { useInvestigationList } from "../../hooks/useInvestigations";
@@ -25,6 +26,7 @@ const navItems: NavItem[] = [
   { label: "Alerts", path: "/alerts", icon: <Bell size={20} /> },
   { label: "Investigation", path: "/investigation", icon: <Search size={20} /> },
   { label: "Reports", path: "/reports", icon: <FileText size={20} /> },
+  { label: "Threat Hunting", path: "/threat-hunting", icon: <Crosshair size={20} /> },
   { label: "Audit Trail", path: "/audit", icon: <ClipboardList size={20} /> },
 ];
 
@@ -96,7 +98,7 @@ export function Sidebar() {
       <div className="border-t border-white/10 px-4 py-4">
         <div className="flex items-center gap-2 text-xs text-gray-500">
           <Activity size={14} className="text-cyan-400" />
-          <span>6 Agents Online</span>
+          <span>9 Agents Online</span>
           <span className="agent-active ml-auto" />
         </div>
       </div>
