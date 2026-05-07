@@ -21,9 +21,15 @@ LABEL maintainer="SOCsentinel Team"
 LABEL org.opencontainers.image.title="SOCsentinel"
 LABEL org.opencontainers.image.description="Multi-Agent LLM Assistant for SOC Analysts"
 
-# System deps
+# System deps (includes WeasyPrint dependencies: cairo, pango, gdk-pixbuf)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
+    libcairo2 \
+    libpango-1.0-0 \
+    libpangocairo-1.0-0 \
+    libgdk-pixbuf2.0-0 \
+    libffi-dev \
+    shared-mime-info \
     && rm -rf /var/lib/apt/lists/*
 
 # Create non-root user (HF Spaces requirement)
