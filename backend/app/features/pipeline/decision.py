@@ -15,6 +15,7 @@ from app.core.logger import get_logger
 from app.shared.schemas import APIResponse, InvestigationStatus
 from app.shared.exceptions.base import NotFoundError
 from app.features.pipeline.service import _pipeline_store
+from app.features.pipeline.feedback import record_feedback
 
 logger = get_logger(__name__)
 
@@ -91,6 +92,21 @@ async def record_decision(investigation_id: str, req: DecisionRequest) -> APIRes
         investigation_id=investigation_id,
         decision=req.decision,
         notes=req.analyst_notes[:100] if req.analyst_notes else "",
+    )
+
+    # Record feedback for self-improving triage loop
+    triage_classification = ""
+    triage_confidence: float | None = None
+    if state.triage_result:
+        triage_classification = state.triage_result.get("classification", "")
+        triage_confidence = state.triage_result.get("confidence")
+
+    record_feedback(
+        alert_severity=state.alert.severity.value,
+        alert_rule_name=state.alert.rule_name,
+        triage_classification=triage_classification,
+        analyst_decision=req.decision,
+        confidence=triage_confidence,
     )
 
     return APIResponse(

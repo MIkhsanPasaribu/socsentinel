@@ -13,6 +13,7 @@ from app.shared.agent_runner import run_agent
 from app.shared.llm.client import get_triage_llm
 from app.shared.llm.prompt_manager import load_prompt
 from app.shared.schemas import AlertInput
+from app.features.pipeline.feedback import get_relevant_feedback
 
 logger = get_logger(__name__)
 
@@ -35,6 +36,17 @@ async def classify_alert(alert: AlertInput, orchestrator_context: dict | None = 
         context_str = (
             "\n\nOrchestrator Context:\n"
             f"{json.dumps(orchestrator_context, indent=2, default=str)}"
+        )
+
+    # Self-improving feedback loop: inject historical analyst decisions
+    feedback = get_relevant_feedback(alert.rule_name)
+    if feedback:
+        context_str += (
+            "\n\nHistorical Analyst Feedback for similar alerts:\n"
+            f"{json.dumps(feedback, indent=2, default=str)}\n"
+            "Use this feedback to calibrate your classification. "
+            "If analysts previously rejected or escalated similar alerts, "
+            "adjust your confidence and classification accordingly."
         )
 
     user_message = (
