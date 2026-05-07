@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SOCsentinel Investigation Report — {{ investigation_id }}</title>
+    <style>
+        {{ css_content }}
+    </style>
+</head>
+<body>
+    <!-- Cover Page -->
+    <div class="cover-page">
+        <div class="cover-logo">SOC<span>sentinel</span></div>
+        <div class="cover-title">Security Investigation Report</div>
+        
+        <div class="cover-badge severity-{{ alert.severity }}">
+            {{ alert.severity.upper() }} Severity
+        </div>
+        
+        <div class="cover-meta">
+            <p><strong>Investigation ID:</strong> {{ investigation_id }}</p>
+            <p><strong>Alert:</strong> {{ alert.rule_name }}</p>
+            <p><strong>Generated:</strong> {{ generated_at_formatted }}</p>
+            <p><strong>Processing Time:</strong> {{ "%.0f"|format(total_processing_time_ms) }}ms</p>
+        </div>
+        
+        <div class="cover-classification">CONFIDENTIAL</div>
+    </div>
+
+    <!-- Executive Summary -->
+    <div class="content">
+        <div class="section">
+            <div class="section-header">
+                <h2>Executive Summary</h2>
+            </div>
+            
+            <div class="summary-box">
+                <p><strong>{{ report.title }}</strong></p>
+                <p>{{ report.executive_summary }}</p>
+            </div>
+            
+            <div class="metrics-grid">
+                <div class="metric-card">
+                    <div class="metric-value">{{ "%.0f"|format(overall_confidence * 100) }}%</div>
+                    <div class="metric-label">AI Confidence</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">{{ triage.classification.upper() }}</div>
+                    <div class="metric-label">Classification</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">{{ mitre.techniques|length }}</div>
+                    <div class="metric-label">MITRE Techniques</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">{{ evidence.iocs|length }}</div>
+                    <div class="metric-label">IOCs Found</div>
+                </div>
+            </div>
+            
+            {% if report.recommendations %}
+            <h3 style="font-size: 14px; margin-top: 24px;">Key Recommendations</h3>
+            <ul>
+                {% for rec in report.recommendations[:5] %}
+                <li>{{ rec }}</li>
+                {% endfor %}
+            </ul>
+            {% endif %}
+        </div>
+
+        <!-- Alert Details -->
+        <div class="section">
+            <div class="section-header">
+                <h2>Alert Details</h2>
+            </div>
+            
+            <div class="info-grid">
+                <div class="info-item">
+                    <div class="info-label">Alert ID</div>
+                    <div class="info-value">{{ alert.alert_id }}</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Rule Name</div>
+                    <div class="info-value">{{ alert.rule_name }}</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Source IP</div>
+                    <div class="info-value">{{ alert.source_ip or "N/A" }}</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Destination IP</div>
+                    <div class="info-value">{{ alert.destination_ip or "N/A" }}</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Username</div>
+                    <div class="info-value">{{ alert.username or "N/A" }}</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Hostname</div>
+                    <div class="info-value">{{ alert.hostname or "N/A" }}</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Protocol</div>
+                    <div class="info-value">{{ alert.protocol or "N/A" }}</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Timestamp</div>
+                    <div class="info-value">{{ alert.timestamp }}</div>
+                </div>
+            </div>
+            
+            {% if alert.description %}
+            <div style="margin-top: 16px;">
+                <div class="info-label">Description</div>
+                <p>{{ alert.description }}</p>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Triage Analysis -->
+        <div class="section">
+            <div class="section-header">
+                <h2>Triage Analysis (L1)</h2>
+            </div>
+            
+            <table>
+                <tr>
+                    <th>Metric</th>
+                    <th>Value</th>
+                </tr>
+                <tr>
+                    <td>Classification</td>
+                    <td><strong>{{ triage.classification.upper() }}</strong></td>
+                </tr>
+                <tr>
+                    <td>Severity</td>
+                    <td><span class="severity-badge severity-{{ triage.severity }}">{{ triage.severity.upper() }}</span></td>
+                </tr>
+                <tr>
+                    <td>AI Confidence</td>
+                    <td>{{ "%.0f"|format(triage.confidence * 100) }}%</td>
+                </tr>
+                <tr>
+                    <td>False Positive Probability</td>
+                    <td class="{% if triage.false_positive_probability > 0.5 %}risk-high{% else %}risk-low{% endif %}">
+                        {{ "%.0f"|format(triage.false_positive_probability * 100) }}%
+                    </td>
+                </tr>
+                <tr>
+                    <td>False Positive</td>
+                    <td>{{ "Yes" if triage.is_false_positive else "No" }}</td>
+                </tr>
+            </table>
+            
+            {% if triage.reasoning %}
+            <div class="summary-box">
+                <div class="info-label">Reasoning</div>
+                <p>{{ triage.reasoning }}</p>
+            </div>
+            {% endif %}
+            
+            {% if triage.evidence_chain %}
+            <h3 style="font-size: 14px; margin-top: 20px;">Evidence Chain</h3>
+            <table>
+                <tr>
+                    <th>Step</th>
+                    <th>Observation</th>
+                    <th>Conclusion</th>
+                </tr>
+                {% for step in triage.evidence_chain %}
+                <tr>
+                    <td>{{ step.step }}</td>
+                    <td>{{ step.observation }}</td>
+                    <td>{{ step.conclusion }}</td>
+                </tr>
+                {% endfor %}
+            </table>
+            {% endif %}
+        </div>
+
+        <!-- Evidence Collection -->
+        {% if evidence.iocs %}
+        <div class="section">
+            <div class="section-header">
+                <h2>Indicators of Compromise</h2>
+            </div>
+            
+            <table>
+                <tr>
+                    <th>Type</th>
+                    <th>Value</th>
+                    <th>Reputation</th>
+                    <th>Source</th>
+                </tr>
+                {% for ioc in evidence.iocs %}
+                <tr>
+                    <td><span class="technique-tag">{{ ioc.type.upper() }}</span></td>
+                    <td><code>{{ ioc.value }}</code></td>
+                    <td class="{% if ioc.reputation == 'malicious' %}risk-high{% elif ioc.reputation == 'suspicious' %}risk-medium{% else %}risk-low{% endif %}">
+                        {{ ioc.reputation.upper() }}
+                    </td>
+                    <td>{{ ioc.source or "N/A" }}</td>
+                </tr>
+                {% endfor %}
+            </table>
+            
+            {% if evidence.enrichment_summary %}
+            <div class="summary-box">
+                <div class="info-label">Enrichment Summary</div>
+                <p>{{ evidence.enrichment_summary }}</p>
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- MITRE ATT&CK Mapping -->
+    <div class="content page-break">
+        <div class="section">
+            <div class="section-header">
+                <h2>MITRE ATT&CK Mapping</h2>
+            </div>
+            
+            {% if mitre.kill_chain_phase %}
+            <div class="metrics-grid">
+                <div class="metric-card">
+                    <div class="metric-value" style="font-size: 14px; text-transform: uppercase;">{{ mitre.kill_chain_phase.replace('_', ' ') }}</div>
+                    <div class="metric-label">Kill Chain Phase</div>
+                </div>
+            </div>
+            {% endif %}
+            
+            {% if mitre.techniques %}
+            <table>
+                <tr>
+                    <th>Technique ID</th>
+                    <th>Name</th>
+                    <th>Tactic</th>
+                    <th>Confidence</th>
+                </tr>
+                {% for tech in mitre.techniques %}
+                <tr>
+                    <td><span class="technique-tag">{{ tech.technique_id }}</span></td>
+                    <td>{{ tech.technique_name }}</td>
+                    <td>{{ tech.tactic }}</td>
+                    <td>{{ "%.0f"|format(tech.confidence * 100) }}%</td>
+                </tr>
+                {% endfor %}
+            </table>
+            {% endif %}
+            
+            {% if mitre.attack_timeline %}
+            <h3 style="font-size: 14px; margin-top: 24px;">Attack Timeline</h3>
+            <table>
+                <tr>
+                    <th>Timestamp</th>
+                    <th>Event</th>
+                    <th>Technique</th>
+                </tr>
+                {% for event in mitre.attack_timeline %}
+                <tr>
+                    <td>{{ event.timestamp }}</td>
+                    <td>{{ event.event }}</td>
+                    <td><span class="technique-tag">{{ event.technique }}</span></td>
+                </tr>
+                {% endfor %}
+            </table>
+            {% endif %}
+        </div>
+
+        <!-- Detection Engineering -->
+        {% if detection.sigma_rule %}
+        <div class="section">
+            <div class="section-header">
+                <h2>Detection Engineering</h2>
+            </div>
+            
+            <div class="info-grid">
+                <div class="info-item">
+                    <div class="info-label">Confidence</div>
+                    <div class="info-value">{{ "%.0f"|format(detection.confidence * 100) }}%</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">False Positive Risk</div>
+                    <div class="info-value {% if detection.false_positive_risk == 'high' %}risk-high{% elif detection.false_positive_risk == 'medium' %}risk-medium{% else %}risk-low{% endif %}">
+                        {{ detection.false_positive_risk.upper() }}
+                    </div>
+                </div>
+            </div>
+            
+            {% if detection.mitre_techniques_mapped %}
+            <div style="margin: 16px 0;">
+                <div class="info-label">Mapped MITRE Techniques</div>
+                <p>
+                    {% for tech in detection.mitre_techniques_mapped %}
+                    <span class="technique-tag" style="margin-right: 8px;">{{ tech }}</span>
+                    {% endfor %}
+                </p>
+            </div>
+            {% endif %}
+            
+            {% if detection.recommended_log_sources %}
+            <div style="margin: 16px 0;">
+                <div class="info-label">Recommended Log Sources</div>
+                <p>{{ detection.recommended_log_sources|join(", ") }}</p>
+            </div>
+            {% endif %}
+            
+            <h3 style="font-size: 14px; margin-top: 20px;">Sigma Rule</h3>
+            <div class="code-block">{{ detection.sigma_rule }}</div>
+            
+            {% if detection.detection_logic %}
+            <div class="summary-box">
+                <div class="info-label">Detection Logic</div>
+                <p>{{ detection.detection_logic }}</p>
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Response Playbook -->
+    <div class="content page-break">
+        <div class="section">
+            <div class="section-header">
+                <h2>Response Playbook</h2>
+            </div>
+            
+            {% if response.playbook_name %}
+            <div class="info-grid">
+                <div class="info-item">
+                    <div class="info-label">Playbook</div>
+                    <div class="info-value">{{ response.playbook_name }}</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Priority</div>
+                    <div class="info-value">{{ response.priority.upper() }}</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Estimated Time</div>
+                    <div class="info-value">{{ response.estimated_containment_time or "N/A" }}</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Status</div>
+                    <div class="info-value">{{ response.containment_status.replace('_', ' ').title() }}</div>
+                </div>
+            </div>
+            {% endif %}
+            
+            {% if response.steps %}
+            <h3 style="font-size: 14px; margin-top: 24px;">Containment Steps</h3>
+            {% for step in response.steps %}
+            <div class="playbook-step">
+                <div class="step-number">{{ step.order }}</div>
+                <div class="step-content">
+                    <div class="step-action">{{ step.action }}</div>
+                    <div class="step-meta">
+                        <span><strong>Tool:</strong> {{ step.tool }}</span>
+                        <span class="{% if step.risk_level == 'high' %}risk-high{% elif step.risk_level == 'medium' %}risk-medium{% else %}risk-low{% endif %}">
+                            <strong>Risk:</strong> {{ step.risk_level.upper() }}
+                        </span>
+                        {% if step.automated %}
+                        <span style="color: #00D4FF;">Automated</span>
+                        {% endif %}
+                    </div>
+                    {% if step.details %}
+                    <div style="margin-top: 8px; font-size: 10px; color: #6B7280;">
+                        {{ step.details }}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+            {% endif %}
+            
+            {% if response.post_incident %}
+            <h3 style="font-size: 14px; margin-top: 24px;">Post-Incident Actions</h3>
+            <ul>
+                {% for action in response.post_incident %}
+                <li>{{ action }}</li>
+                {% endfor %}
+            </ul>
+            {% endif %}
+        </div>
+
+        <!-- Validator Audit -->
+        {% if validator %}
+        <div class="section">
+            <div class="section-header">
+                <h2>Adversarial Audit</h2>
+            </div>
+            
+            <div class="info-grid">
+                <div class="info-item">
+                    <div class="info-label">Validation Status</div>
+                    <div class="info-value">
+                        {% if validator.is_approved %}
+                        <span class="status-badge status-approved">APPROVED</span>
+                        {% else %}
+                        <span class="status-badge status-rejected">REJECTED</span>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Risk Score</div>
+                    <div class="info-value {% if validator.risk_score > 0.5 %}risk-high{% elif validator.risk_score > 0.3 %}risk-medium{% else %}risk-low{% endif %}">
+                        {{ "%.0f"|format(validator.risk_score * 100) }}%
+                    </div>
+                </div>
+            </div>
+            
+            {% if validator.critic_comments %}
+            <div class="summary-box" style="{% if not validator.is_approved %}border-left-color: #DC2626; background: #FEF2F2;{% endif %}">
+                <div class="info-label">Critic Comments</div>
+                <p>{{ validator.critic_comments }}</p>
+            </div>
+            {% endif %}
+            
+            {% if validator.safe_alternatives %}
+            <h3 style="font-size: 14px; margin-top: 20px;">Safer Alternatives</h3>
+            <ul>
+                {% for alt in validator.safe_alternatives %}
+                <li class="risk-medium">{{ alt }}</li>
+                {% endfor %}
+            </ul>
+            {% endif %}
+            
+            {% if validator.sigma_rule %}
+            <h3 style="font-size: 14px; margin-top: 20px;">Validator-Generated Sigma Rule</h3>
+            <div class="code-block">{{ validator.sigma_rule }}</div>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        <!-- Audit Trail -->
+        {% if audit_trail %}
+        <div class="section">
+            <div class="section-header">
+                <h2>Audit Trail</h2>
+            </div>
+            
+            <table>
+                <tr>
+                    <th>Time</th>
+                    <th>Agent</th>
+                    <th>Step</th>
+                    <th>Status</th>
+                    <th>Time (ms)</th>
+                </tr>
+                {% for entry in audit_trail %}
+                <tr>
+                    <td>{{ entry.timestamp.split('T')[1].split('.')[0] if 'T' in entry.timestamp else entry.timestamp }}</td>
+                    <td>{{ entry.agent }}</td>
+                    <td>{{ entry.step }}</td>
+                    <td>{{ entry.status.upper() }}</td>
+                    <td>{{ entry.processing_time_ms }}</td>
+                </tr>
+                {% endfor %}
+            </table>
+        </div>
+        {% endif %}
+        
+        <div class="footer-note">
+            <p>This report was generated automatically by SOCsentinel's Multi-Agent AI System.</p>
+            <p>Powered by Qwen3 on AMD MI300X (ROCm) | MITRE ATT&CK v16 | Investigation ID: {{ investigation_id }}</p>
+        </div>
+    </div>
+</body>
+</html>
