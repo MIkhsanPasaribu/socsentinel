@@ -2,8 +2,9 @@
 SOCsentinel — FastAPI application entry point.
 
 Multi-Agent LLM Assistant for SOC Analysts.
-Coordinates 5 specialized AI agents (Orchestrator, L1 Triage,
-Evidence Collector, MITRE Mapper, Report Writer) for automated
+Coordinates 9 specialized AI agents (Orchestrator, L1 Triage,
+Evidence Collector, MITRE Mapper, Detection Engineer, Report Writer,
+Response Planner, Validator, Threat Generator) for automated
 security alert investigation.
 """
 
@@ -65,7 +66,7 @@ def create_app() -> FastAPI:
         description=(
             "Multi-Agent LLM Assistant for SOC Analysts. "
             "Automates alert triage, evidence collection, MITRE ATT&CK mapping, "
-            "and investigation report generation using 5 specialized AI agents "
+            "detection engineering, and incident response using 9 specialized AI agents "
             "powered by Qwen3 on AMD MI300X (ROCm)."
         ),
         version="0.1.0",
@@ -110,6 +111,7 @@ def create_app() -> FastAPI:
     from app.features.threat_generator.router import router as threat_generator_router
     from app.features.threat_intel.router import router as threat_intel_router
     from app.features.soar_integration.router import router as soar_router
+    from app.features.report_export.router import router as report_export_router
 
     api_prefix = settings.api_v1_prefix
 
@@ -130,6 +132,7 @@ def create_app() -> FastAPI:
     app.include_router(threat_generator_router, prefix=api_prefix)
     app.include_router(threat_intel_router, prefix=api_prefix)
     app.include_router(soar_router, prefix=api_prefix)
+    app.include_router(report_export_router, prefix=api_prefix)
 
     # Serve React frontend static files in production (HF Spaces)
     import os
