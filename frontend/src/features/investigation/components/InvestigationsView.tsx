@@ -29,6 +29,13 @@ import { ALERT_SCENARIOS } from "../../../core/constants/scenarios";
 import { useFormValidation } from "../../../shared/hooks/useFormValidation";
 import { scenarioSchema } from "../../../shared/lib/validation";
 import { useInvestigationList } from "../../../shared/hooks/useInvestigations";
+import { PerformanceBreakdown } from "./PerformanceBreakdown";
+import { ThinkingPanel, ThinkingModeToggle } from "./ThinkingPanel";
+import { AgentCollaborationGraph } from "./AgentCollaborationGraph";
+import { ExecutiveSummary } from "./ExecutiveSummary";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { apiClient } from "../../../shared/lib/api";
+import type { APIResponse } from "../../../shared/types";
 
 /** Agent step visualization for the SSE pipeline. */
 function AgentStepRow({ agent }: { agent: AgentStep }) {
@@ -136,7 +143,27 @@ export function InvestigationsView() {
     reset,
   } = useSSEInvestigation(env.apiUrl);
   const [selectedScenario, setSelectedScenario] = useState("brute_force");
+  const [vizMode, setVizMode] = useState<"flow" | "graph">("flow");
   const { errors, validate, clearErrors } = useFormValidation(scenarioSchema);
+
+  const queryClient = useQueryClient();
+
+  const { data: thinkingStatus } = useQuery<boolean>({
+    queryKey: ["thinking-mode"],
+    queryFn: async () => {
+      const res = await apiClient.get<APIResponse>("/pipeline/thinking-mode");
+      return !!(res.data.data as Record<string, unknown>)?.thinking_mode;
+    },
+  });
+
+  const thinkingToggle = useMutation({
+    mutationFn: async (enabled: boolean) => {
+      await apiClient.post(`/pipeline/thinking-mode?enabled=${enabled}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["thinking-mode"] });
+    },
+  });
 
   const { data: investigations = [] } = useInvestigationList(5000);
   const completedCount = sseState.agents.filter(
@@ -177,6 +204,11 @@ export function InvestigationsView() {
               </option>
             ))}
           </select>
+          <ThinkingModeToggle
+            enabled={thinkingStatus ?? false}
+            onToggle={() => thinkingToggle.mutate(!(thinkingStatus ?? false))}
+            loading={thinkingToggle.isPending}
+          />
           <button
             onClick={() => {
               if (!validate(selectedScenario)) {
@@ -253,13 +285,43 @@ export function InvestigationsView() {
             </div>
           </div>
 
-          {/* Pipeline Flow Diagram */}
-          <PipelineFlowDiagram
-            currentStep={sseState.agents.find((a) => a.status === "running")?.step}
-            completedSteps={sseState.agents
-              .filter((a) => a.status === "completed")
-              .map((a) => ({ step: a.step, processing_time_ms: a.processing_time_ms ?? undefined }))}
-          />
+          {/* Visualization Toggle */}
+          <div className="flex items-center gap-1 rounded-lg border border-white/10 bg-white/5 p-0.5 w-fit">
+            <button
+              onClick={() => setVizMode("flow")}
+              className={cn(
+                "rounded-md px-3 py-1 text-xs font-medium transition-all",
+                vizMode === "flow"
+                  ? "bg-cyan-500/20 text-cyan-400"
+                  : "text-gray-500 hover:text-gray-300"
+              )}
+            >
+              Flow
+            </button>
+            <button
+              onClick={() => setVizMode("graph")}
+              className={cn(
+                "rounded-md px-3 py-1 text-xs font-medium transition-all",
+                vizMode === "graph"
+                  ? "bg-cyan-500/20 text-cyan-400"
+                  : "text-gray-500 hover:text-gray-300"
+              )}
+            >
+              Network
+            </button>
+          </div>
+
+          {/* Pipeline Flow Diagram or Agent Collaboration Graph */}
+          {vizMode === "flow" ? (
+            <PipelineFlowDiagram
+              currentStep={sseState.agents.find((a) => a.status === "running")?.step}
+              completedSteps={sseState.agents
+                .filter((a) => a.status === "completed")
+                .map((a) => ({ step: a.step, processing_time_ms: a.processing_time_ms ?? undefined }))}
+            />
+          ) : (
+            <AgentCollaborationGraph agents={sseState.agents} />
+          )}
 
           {/* Agent steps */}
           <div className="space-y-2">
@@ -283,6 +345,24 @@ export function InvestigationsView() {
             </div>
           )}
 
+          {/* Executive Summary */}
+          {sseState.phase === "completed" && sseState.totalTimeMs && (
+            <ExecutiveSummary
+              agents={sseState.agents}
+              totalTimeMs={sseState.totalTimeMs}
+              severity={sseState.severity}
+              ruleName={sseState.ruleName}
+            />
+          )}
+
+          {/* Performance Breakdown */}
+          {sseState.phase === "completed" && sseState.totalTimeMs && (
+            <PerformanceBreakdown
+              agents={sseState.agents}
+              totalTimeMs={sseState.totalTimeMs}
+            />
+          )}
+
           {sseState.phase === "failed" && (
             <div className="flex items-center gap-2 rounded-xl border border-red-500/20 bg-red-500/5 px-4 py-3">
               <XCircle size={18} className="text-red-400" />
@@ -290,6 +370,12 @@ export function InvestigationsView() {
                 Pipeline Failed: {sseState.error}
               </span>
             </div>
+          )}
+
+          {/* Thinking Mode Panel */}
+          {sseState.thinkingMode &&
+            sseState.agents.some((a) => a.thinking_content) && (
+              <ThinkingPanel agents={sseState.agents} />
           )}
 
           {/* Human-in-the-Loop Decision Panel */}
