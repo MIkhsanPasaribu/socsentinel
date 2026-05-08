@@ -68,3 +68,25 @@ export interface InvestigationSummary {
   completed_at: string | null;
   processing_time_ms: number;
 }
+
+export interface AgentPerformance {
+  agent: string;
+  avg_time_ms: number;
+  total_runs: number;
+  max_time_ms: number;
+  min_time_ms: number;
+}
+
+export interface PipelineStats {
+  total_investigations: number;
+  completed: number;
+  failed: number;
+  avg_processing_time_ms: number;
+  total_alerts_today: number;
+  auto_triaged: number;
+  auto_triage_rate: number;
+  false_positive_rate: number;
+  escalation_rate: number;
+  investigations_by_severity: Record<string, number>;
+  agent_performance: AgentPerformance[];
+}
