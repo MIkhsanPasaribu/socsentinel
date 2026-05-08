@@ -20,7 +20,7 @@ app_port: 7860
 <h3 align="center">Multi-Agent LLM Assistant for SOC Analysts</h3>
 
 <p align="center">
-  <em>Automating Level 1-3 SOC analyst workflows with 8 specialized AI agents powered by Qwen3 on AMD MI300X (ROCm).</em>
+  <em>Automating Level 1-3 SOC analyst workflows with 9 specialized AI agents powered by Qwen3 on AMD MI300X (ROCm).</em>
 </p>
 
 <p align="center">
@@ -53,7 +53,7 @@ Security Operation Centers face an unsustainable workload:
 │                    FastAPI Backend                        │
 │             /api/v1/* (Pydantic v2, LangChain)           │
 ├─────────────────────────────────────────────────────────┤
-│               8-Agent Investigation Pipeline             │
+│               9-Agent Investigation Pipeline             │
 │                                                         │
 │  ┌────────────┐  ┌──────────┐  ┌──────────┐  ┌────────┐ │
 │  │Orchestrator │→│L1 Triage │→│ Evidence │→│ MITRE  │ │
@@ -63,7 +63,7 @@ Security Operation Centers face an unsustainable workload:
 │                                                  ↓       │
 │                                     ┌──────────────────┐ │
 │                                     │ Threat Generator │ │
-│                                     │  (optional)      │ │
+│                                     │  (Qwen3-7B)     │ │
 │                                     └──────┬───────────┘ │
 │                                            ↓             │
 │  ┌──────────┐  ┌──────────┐  ┌────────────────┐  ┌─────┐│
@@ -77,7 +77,7 @@ Security Operation Centers face an unsustainable workload:
 
 ## 🤖 Agent Specializations
 
-SOCsentinel deploys 8 specialized AI agents (plus an optional Threat Generator), each utilizing specific reasoning guardrails and Qwen3 models optimized for their workload:
+SOCsentinel deploys 9 specialized AI agents, each utilizing specific reasoning guardrails and Qwen3 models optimized for their workload:
 
 | Agent                           | Model     | Role & Capability                                                                |
 | ------------------------------- | --------- | -------------------------------------------------------------------------------- |
@@ -89,7 +89,7 @@ SOCsentinel deploys 8 specialized AI agents (plus an optional Threat Generator),
 | **Report Writer**               | Qwen3-14B | Comprehensive investigation reporting and executive summaries.                   |
 | **Response Planner**            | Qwen3-14B | Automatic generation of prioritized, step-by-step L3 containment playbooks.      |
 | **Validator**                   | Qwen3-7B  | Adversarial safety review with risk scoring and optional Sigma validation.       |
-| **Threat Generator (Optional)** | Qwen3-7B  | Proactive attack scenario generation for hunting and purple team exercises.      |
+| **Threat Generator**            | Qwen3-7B  | Proactive attack scenario generation for hunting and purple team exercises.      |
 
 ## ✨ Key Features
 
@@ -99,7 +99,11 @@ SOCsentinel deploys 8 specialized AI agents (plus an optional Threat Generator),
 - **Threat Intel RAG**: Vector-grounded intelligence utilizing ChromaDB to parse and map over 697 MITRE techniques in real-time.
 - **Sigma Detection Rules**: Detection Agent outputs deployable Sigma YAML for SIEM platforms.
 - **SOAR Export**: Push investigation results to Splunk SOAR, Cortex XSOAR, or Microsoft Sentinel formats.
-- **Human-in-the-Loop (HITL)**: Enterprise-grade escalation engine where human analysts can approve, reject, or escalate the AI's proposed response playbooks.
+- **Analyst Workbench (HITL)**: Advanced Human-in-the-Loop panel with auto-generated risk assessment, confidence override slider, decision history for same alert rules, and full audit trail.
+- **Self-Improving Triage Loop**: Closed-loop feedback system where analyst corrections automatically calibrate future AI triage classifications with visible learning metrics.
+- **Benchmark Dashboard**: One-click performance benchmark across 5 attack scenarios with per-agent latency charts, industry comparison table, and AMD MI300X GPU specs.
+- **Agent Collaboration Network**: Interactive circular graph visualization showing real-time data flow between 9 agents with animated particles and confidence badges.
+- **Executive Summary Banner**: Post-investigation verdict with kill chain progress, time saved vs manual analysis, and recommended actions at a glance.
 
 ## 🚀 Quick Start
 
@@ -150,7 +154,7 @@ pytest tests/ -v
 | ------ | ------------------------------------- | ---------------------------------- |
 | `GET`  | `/health`                             | Health check                       |
 | `POST` | `/api/v1/alerts/generate`             | Generate synthetic alert           |
-| `POST` | `/api/v1/pipeline/investigate`        | Run full 8-agent investigation     |
+| `POST` | `/api/v1/pipeline/investigate`        | Run full 9-agent investigation     |
 | `POST` | `/api/v1/pipeline/investigate-demo`   | Demo with synthetic alert          |
 | `GET`  | `/api/v1/pipeline/stream-investigate` | SSE real-time pipeline stream      |
 | `GET`  | `/api/v1/pipeline/list`               | List all investigations            |
@@ -158,6 +162,9 @@ pytest tests/ -v
 | `GET`  | `/api/v1/pipeline/stats`              | Dashboard aggregate metrics        |
 | `GET`  | `/api/v1/pipeline/mitre-heatmap`      | Aggregated MITRE technique density |
 | `POST` | `/api/v1/pipeline/decision/{id}`      | Human-in-Loop decision             |
+| `GET`  | `/api/v1/pipeline/risk-summary/{id}`  | Auto-generated risk assessment     |
+| `GET`  | `/api/v1/pipeline/feedback-stats`     | Self-improving triage metrics      |
+| `POST` | `/api/v1/pipeline/benchmark`          | Run 5-scenario benchmark           |
 | `POST` | `/api/v1/pipeline/thinking-mode`      | Toggle Qwen3 CoT reasoning         |
 | `POST` | `/api/v1/detection/generate`          | Generate Sigma detection rule      |
 | `POST` | `/api/v1/response-planner/generate`   | Generate response playbook         |
@@ -202,7 +209,7 @@ _Interactive API docs available at `http://localhost:8000/docs`._
 ## 🏆 Hackathon Targets
 
 - **Grand Prize** — End-to-end multi-agent SOC platform.
-- **Track 1: AI Agents** — 8 specialized, coordinated agents utilizing RAG and HITL workflows.
+- **Track 1: AI Agents** — 9 specialized, coordinated agents utilizing RAG and HITL workflows.
 - **Hugging Face Special Prize** — Prepared for HF Spaces deployment.
 - **Build in Public** — Open development process.
 
