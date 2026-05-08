@@ -10,6 +10,7 @@ import {
   Shield,
   Activity,
   Crosshair,
+  Gauge,
   X,
 } from "lucide-react";
 import { cn } from "../../lib/utils";
@@ -35,6 +36,7 @@ const navItems: NavItem[] = [
   { label: "Reports", path: "/reports", icon: <FileText size={20} /> },
   { label: "Threat Hunting", path: "/threat-hunting", icon: <Crosshair size={20} /> },
   { label: "Audit Trail", path: "/audit", icon: <ClipboardList size={20} /> },
+  { label: "Benchmark", path: "/benchmark", icon: <Gauge size={20} /> },
 ];
 
 export function Sidebar({ open, onClose }: SidebarProps) {
