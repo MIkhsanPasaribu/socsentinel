@@ -33,6 +33,10 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         llm_provider=settings.llm_provider,
     )
 
+    # Initialize SQLite database
+    from app.shared.database import init_database
+    init_database()
+
     # Initialize MITRE ATT&CK RAG on startup (non-blocking check)
     try:
         from app.shared.rag.vector_store import get_collection
