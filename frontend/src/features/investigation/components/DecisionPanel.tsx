@@ -101,7 +101,7 @@ export function DecisionPanel({
   }
 
   return (
-    <div className="animate-slide-up rounded-xl border border-cyan-500/20 bg-gradient-to-br from-cyan-500/5 to-blue-500/5 p-6">
+    <div className="animate-slide-up rounded-xl border border-cyan-500/20 bg-gradient-to-br from-cyan-500/5 to-blue-500/5 p-4 sm:p-6">
       <div className="mb-4 flex items-center gap-3">
         <div className="rounded-lg bg-cyan-500/10 p-2">
           <Shield size={20} className="text-cyan-400" />
@@ -144,25 +144,25 @@ export function DecisionPanel({
       </div>
 
       {/* Decision Buttons */}
-      <div className="flex gap-3">
+      <div className="flex flex-col gap-2 sm:flex-row sm:gap-3">
         <button
           onClick={() => handleDecision("approve")}
           disabled={decisionMutation.isPending}
-          className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-green-500/10 border border-green-500/30 px-4 py-2.5 text-sm font-medium text-green-400 transition-all hover:bg-green-500/20 hover:shadow-lg hover:shadow-green-500/10 disabled:opacity-50"
+          className="flex flex-1 items-center justify-center gap-2 rounded-lg border border-green-500/30 bg-green-500/10 px-4 py-2.5 text-sm font-medium text-green-400 transition-all hover:bg-green-500/20 hover:shadow-lg hover:shadow-green-500/10 disabled:opacity-50"
         >
           <CheckCircle2 size={16} /> Approve Response
         </button>
         <button
           onClick={() => handleDecision("escalate")}
           disabled={decisionMutation.isPending}
-          className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-orange-500/10 border border-orange-500/30 px-4 py-2.5 text-sm font-medium text-orange-400 transition-all hover:bg-orange-500/20 hover:shadow-lg hover:shadow-orange-500/10 disabled:opacity-50"
+          className="flex flex-1 items-center justify-center gap-2 rounded-lg border border-orange-500/30 bg-orange-500/10 px-4 py-2.5 text-sm font-medium text-orange-400 transition-all hover:bg-orange-500/20 hover:shadow-lg hover:shadow-orange-500/10 disabled:opacity-50"
         >
           <AlertTriangle size={16} /> Escalate to L3
         </button>
         <button
           onClick={() => handleDecision("reject")}
           disabled={decisionMutation.isPending}
-          className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-red-500/10 border border-red-500/30 px-4 py-2.5 text-sm font-medium text-red-400 transition-all hover:bg-red-500/20 hover:shadow-lg hover:shadow-red-500/10 disabled:opacity-50"
+          className="flex flex-1 items-center justify-center gap-2 rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-2.5 text-sm font-medium text-red-400 transition-all hover:bg-red-500/20 hover:shadow-lg hover:shadow-red-500/10 disabled:opacity-50"
         >
           <XCircle size={16} /> Reject
         </button>

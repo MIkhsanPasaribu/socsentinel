@@ -55,15 +55,15 @@ function ReportCard({ investigation }: { investigation: Investigation }) {
     <div className="glass-card animate-slide-up overflow-hidden transition-all">
       {/* Header */}
       <div
-        className="flex cursor-pointer items-start justify-between gap-4"
+        className="flex cursor-pointer flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4"
         onClick={() => setExpanded(!expanded)}
       >
-        <div className="flex-1 space-y-2">
-          <div className="flex items-center gap-2">
+        <div className="min-w-0 flex-1 space-y-2">
+          <div className="flex flex-wrap items-center gap-2">
             <span className={getSeverityBadgeClass(investigation.alert?.severity || "info")}>
               {(investigation.alert?.severity || "info").toUpperCase()}
             </span>
-            <span className="font-mono text-xs text-gray-500">
+            <span className="truncate font-mono text-xs text-gray-500">
               {investigation.investigation_id}
             </span>
             <span className="flex items-center gap-1 text-xs text-green-400">
@@ -88,7 +88,7 @@ function ReportCard({ investigation }: { investigation: Investigation }) {
             )}
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="relative flex items-center gap-2 self-end sm:self-start">
           <ExportButtons investigationId={investigation.investigation_id} />
           <button className="rounded-lg bg-white/5 p-2 text-gray-400 transition-colors hover:bg-white/10 hover:text-white">
             {expanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
@@ -117,7 +117,7 @@ function ReportCard({ investigation }: { investigation: Investigation }) {
               <h4 className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-cyan-400">
                 <AlertTriangle size={14} /> Triage Analysis
               </h4>
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
                 {triage.classification && (
                   <div className="rounded-lg bg-white/5 p-2.5">
                     <p className="text-[10px] uppercase text-gray-500">Classification</p>
@@ -219,7 +219,7 @@ function ReportCard({ investigation }: { investigation: Investigation }) {
               </div>
 
               {/* Detection metadata grid */}
-              <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+              <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
                 {detection.mitre_techniques_mapped && detection.mitre_techniques_mapped.length > 0 && (
                   <div className="rounded-lg bg-white/5 p-2.5">
                     <p className="text-[10px] uppercase text-gray-500">Techniques</p>
@@ -329,7 +329,7 @@ function ReportCard({ investigation }: { investigation: Investigation }) {
                       </div>
                       <div className="flex-1">
                         <p className="text-sm font-medium text-white">{step.action}</p>
-                        <div className="mt-1 flex items-center gap-2 text-[10px] text-gray-400">
+                        <div className="mt-1 flex flex-wrap items-center gap-2 text-[10px] text-gray-400">
                           <span className="font-mono bg-white/10 px-1 rounded">{step.tool}</span>
                           <span className={step.risk_level === "high" ? "text-red-400" : step.risk_level === "medium" ? "text-orange-400" : "text-green-400"}>
                             Risk: {step.risk_level}

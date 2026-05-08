@@ -93,12 +93,15 @@ export function MitreHeatmap() {
             {data.total_techniques_mapped} Techniques Mapped
           </span>
         </div>
-        <p className="mt-1 text-xs text-gray-400">
-          Technique density across {data.total_investigations_analyzed} investigations
-        </p>
+        <div className="mt-1 flex items-center justify-between">
+          <p className="text-xs text-gray-400">
+            Technique density across {data.total_investigations_analyzed} investigations
+          </p>
+          <span className="text-[10px] text-gray-600 sm:hidden">&larr; scroll &rarr;</span>
+        </div>
       </div>
 
-      <div className="flex-1 overflow-x-auto p-4 custom-scrollbar">
+      <div className="flex-1 overflow-x-auto p-3 sm:p-4 custom-scrollbar">
         <div className="flex gap-2" style={{ minWidth: "max-content" }}>
           {orderedTactics.map((tactic, i) => (
             <div key={i} className="flex w-32 flex-col gap-2">

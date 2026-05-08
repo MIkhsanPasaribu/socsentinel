@@ -77,7 +77,7 @@ function AgentStepRow({ agent }: { agent: AgentStep }) {
   return (
     <div
       className={cn(
-        "flex items-center gap-4 rounded-xl border px-4 py-3 transition-all duration-500",
+        "flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4 rounded-xl border px-4 py-3 transition-all duration-500",
         s.border,
         s.bg,
       )}
@@ -99,7 +99,7 @@ function AgentStepRow({ agent }: { agent: AgentStep }) {
       </div>
 
       {/* Status */}
-      <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center gap-2 sm:gap-3">
         {agent.status === "running" && (
           <Loader2 size={14} className="animate-spin text-cyan-400" />
         )}
@@ -153,14 +153,14 @@ export function InvestigationsView() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-white">Investigations</h1>
           <p className="mt-1 text-sm text-gray-400">
             Real-time multi-agent pipeline with SSE streaming
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
           <select
             value={selectedScenario}
             onChange={(e) => {
@@ -169,7 +169,7 @@ export function InvestigationsView() {
                 clearErrors();
               }
             }}
-            className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs text-gray-300 outline-none focus:border-cyan-500/30"
+            className="w-full sm:w-auto rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs text-gray-300 outline-none focus:border-cyan-500/30"
           >
             {scenarios.map((s) => (
               <option key={s} value={s} className="bg-navy-900">
@@ -191,7 +191,7 @@ export function InvestigationsView() {
             disabled={
               sseState.phase === "streaming" || sseState.phase === "connecting"
             }
-            className="flex items-center gap-2 rounded-lg bg-gradient-to-r from-cyan-500 to-blue-600 px-4 py-2 text-sm font-medium text-white transition-all hover:shadow-lg hover:shadow-cyan-500/25 disabled:opacity-50"
+            className="flex w-full sm:w-auto justify-center items-center gap-2 rounded-lg bg-gradient-to-r from-cyan-500 to-blue-600 px-4 py-2 text-sm font-medium text-white transition-all hover:shadow-lg hover:shadow-cyan-500/25 disabled:opacity-50"
           >
             {sseState.phase === "streaming" ? (
               <>
@@ -213,7 +213,7 @@ export function InvestigationsView() {
       {sseState.phase !== "idle" && (
         <div className="space-y-4">
           {/* Pipeline header */}
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-3">
               {sseState.severity && (
                 <span className={getSeverityBadgeClass(sseState.severity)}>
@@ -232,12 +232,12 @@ export function InvestigationsView() {
 
             {/* Progress */}
             <div className="flex items-center gap-3">
-              <div className="flex items-center gap-1.5">
+              <div className="flex flex-wrap items-center gap-1.5">
                 {sseState.agents.map((a, i) => (
                   <div
                     key={i}
                     className={cn(
-                      "h-2 w-8 rounded-full transition-all duration-500",
+                      "h-2 w-6 sm:w-8 rounded-full transition-all duration-500",
                       a.status === "completed"
                         ? "bg-green-500"
                         : a.status === "running"
@@ -313,19 +313,19 @@ export function InvestigationsView() {
             {investigations.slice(0, 10).map((inv) => (
               <div
                 key={inv.investigation_id}
-                className="flex items-center gap-4 rounded-lg border border-white/5 bg-white/[0.02] px-4 py-2.5 text-xs"
+                className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4 rounded-lg border border-white/5 bg-white/[0.02] px-3 py-2.5 sm:px-4 text-xs"
               >
                 <span className={getSeverityBadgeClass(inv.severity)}>
                   {inv.severity.toUpperCase()}
                 </span>
-                <span className="font-mono text-gray-400">
+                <span className="truncate max-w-[200px] font-mono text-gray-400">
                   {inv.investigation_id}
                 </span>
                 <span className="flex items-center gap-1 text-gray-500">
                   <Clock size={12} />{" "}
                   {inv.processing_time_ms?.toFixed(0) || "?"}ms
                 </span>
-                <span className="ml-auto flex items-center gap-1 text-green-400">
+                <span className="sm:ml-auto flex items-center gap-1 text-green-400">
                   <CheckCircle2 size={12} /> {inv.status}
                 </span>
               </div>

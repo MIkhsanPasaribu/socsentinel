@@ -21,7 +21,7 @@ function AlertCard({
   onInvestigate: (a: Alert) => void;
 }) {
   return (
-    <div className="glass-card animate-slide-up flex items-start justify-between gap-4 transition-all hover:border-cyan-500/30">
+    <div className="glass-card animate-slide-up flex flex-col gap-3 transition-all hover:border-cyan-500/30 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
       <div className="flex-1 space-y-2">
         <div className="flex items-center gap-2">
           <span className={getSeverityBadgeClass(alert.severity)}>
@@ -48,7 +48,7 @@ function AlertCard({
       </div>
       <button
         onClick={() => onInvestigate(alert)}
-        className="flex items-center gap-1.5 rounded-lg bg-cyan-500/10 px-3 py-2 text-xs font-medium text-cyan-400 transition-all hover:bg-cyan-500/20 hover:shadow-lg hover:shadow-cyan-500/10"
+        className="flex w-full items-center justify-center gap-1.5 rounded-lg bg-cyan-500/10 px-3 py-2 text-xs font-medium text-cyan-400 transition-all hover:bg-cyan-500/20 hover:shadow-lg hover:shadow-cyan-500/10 sm:w-auto sm:justify-start"
       >
         Investigate <ArrowRight size={14} />
       </button>
@@ -99,14 +99,14 @@ export function AlertsView() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-white">Alert Queue</h1>
           <p className="mt-1 text-sm text-gray-400">
             Incoming SIEM alerts awaiting triage and investigation
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           {scenarios.map((s) => (
             <button
               key={s}
@@ -149,7 +149,7 @@ export function AlertsView() {
 
       {/* Investigation progress */}
       {investigating && (
-        <div className="fixed bottom-6 right-6 z-50 animate-slide-up rounded-xl border border-cyan-500/30 bg-navy-900/95 p-4 shadow-2xl backdrop-blur-xl glow-cyan">
+        <div className="fixed bottom-6 right-3 left-3 z-50 max-w-[calc(100vw-1.5rem)] animate-slide-up rounded-xl border border-cyan-500/30 bg-navy-900/95 p-4 shadow-2xl backdrop-blur-xl glow-cyan sm:left-auto sm:right-6 sm:max-w-sm">
           <div className="flex items-center gap-3">
             <RefreshCw size={18} className="animate-spin text-cyan-400" />
             <div>

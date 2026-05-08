@@ -55,7 +55,7 @@ function StatCard({
 
   return (
     <div
-      className={`animate-fade-in rounded-xl border bg-gradient-to-br p-6 ${accentMap[accentColor]}`}
+      className={`animate-fade-in rounded-xl border bg-gradient-to-br p-4 sm:p-6 ${accentMap[accentColor]}`}
     >
       <div className="flex items-start justify-between">
         <div>
@@ -63,7 +63,7 @@ function StatCard({
           {isLoading ? (
             <div className="mt-2 h-9 w-20 animate-pulse rounded bg-white/10" />
           ) : (
-            <p className="mt-2 text-3xl font-bold text-white">{value}</p>
+            <p className="mt-2 text-2xl sm:text-3xl font-bold text-white">{value}</p>
           )}
           <p className="mt-1 text-xs text-gray-500">{subtitle}</p>
         </div>
@@ -108,7 +108,7 @@ function AgentCard({
   const hasRuns = totalRuns !== undefined && totalRuns > 0;
 
   return (
-    <div className="glass-card animate-slide-up flex items-center justify-between">
+    <div className="glass-card animate-slide-up flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       <div className="flex items-center gap-4">
         <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-cyan-500/20 to-blue-600/20">
           <Brain size={20} className="text-cyan-400" />
@@ -118,7 +118,7 @@ function AgentCard({
           <p className="text-xs text-gray-500">{role}</p>
         </div>
       </div>
-      <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center gap-2 sm:gap-3">
         <span className="rounded-md bg-white/5 px-2 py-1 font-mono text-[10px] text-gray-400">
           {model}
         </span>
@@ -156,13 +156,13 @@ function InvestigationRow({
   return (
     <div
       onClick={onClick}
-      className="flex cursor-pointer items-center gap-4 rounded-lg border border-white/5 bg-white/[0.02] px-4 py-3 transition-all hover:border-cyan-500/20 hover:bg-white/[0.04]"
+      className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4 cursor-pointer rounded-lg border border-white/5 bg-white/[0.02] px-3 py-2.5 sm:px-4 sm:py-3 transition-all hover:border-cyan-500/20 hover:bg-white/[0.04]"
     >
       <span className={getSeverityBadgeClass(inv.severity)}>
         {inv.severity.toUpperCase()}
       </span>
       <div className="flex-1">
-        <p className="font-mono text-xs text-gray-300">{inv.investigation_id}</p>
+        <p className="truncate font-mono text-xs text-gray-300">{inv.investigation_id}</p>
         <p className="text-[10px] text-gray-500">{inv.alert_id}</p>
       </div>
       <div className="flex items-center gap-1 text-xs text-gray-400">
@@ -173,8 +173,8 @@ function InvestigationRow({
         <CheckCircle2 size={12} />
         {inv.status}
       </span>
-      <span className="text-[10px] text-gray-500">{formatRelativeTime(inv.started_at)}</span>
-      <ArrowRight size={14} className="text-gray-500" />
+      <span className="hidden sm:inline text-[10px] text-gray-500">{formatRelativeTime(inv.started_at)}</span>
+      <ArrowRight size={14} className="hidden sm:block text-gray-500" />
     </div>
   );
 }
@@ -258,7 +258,7 @@ export function DashboardView() {
       </div>
 
       {/* GPU Performance Panel */}
-      <div className="rounded-xl border border-cyan-500/20 bg-gradient-to-br from-cyan-500/5 to-blue-600/5 p-6">
+      <div className="rounded-xl border border-cyan-500/20 bg-gradient-to-br from-cyan-500/5 to-blue-600/5 p-4 sm:p-6">
         <div className="mb-4 flex items-center gap-2">
           <Cpu size={18} className="text-cyan-400" />
           <h2 className="text-lg font-semibold text-white">AMD MI300X Performance</h2>
@@ -269,7 +269,7 @@ export function DashboardView() {
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           <div className="rounded-lg bg-white/5 p-3 text-center">
             <p className="text-[10px] uppercase tracking-wider text-gray-500">Avg Inference</p>
-            <p className="mt-1 text-2xl font-bold text-cyan-400">
+            <p className="mt-1 text-xl sm:text-2xl font-bold text-cyan-400">
               {stats?.avg_processing_time_ms
                 ? `${Math.round(stats.avg_processing_time_ms / 9)}ms`
                 : "~850ms"}
@@ -278,7 +278,7 @@ export function DashboardView() {
           </div>
           <div className="rounded-lg bg-white/5 p-3 text-center">
             <p className="text-[10px] uppercase tracking-wider text-gray-500">Pipeline Throughput</p>
-            <p className="mt-1 text-2xl font-bold text-green-400">
+            <p className="mt-1 text-xl sm:text-2xl font-bold text-green-400">
               {stats?.avg_processing_time_ms
                 ? `~${Math.round(3600000 / stats.avg_processing_time_ms)}/hr`
                 : "~60/hr"}
@@ -287,12 +287,12 @@ export function DashboardView() {
           </div>
           <div className="rounded-lg bg-white/5 p-3 text-center">
             <p className="text-[10px] uppercase tracking-wider text-gray-500">GPU Accelerator</p>
-            <p className="mt-1 text-2xl font-bold text-white">MI300X</p>
+            <p className="mt-1 text-xl sm:text-2xl font-bold text-white">MI300X</p>
             <p className="text-[10px] text-gray-500">192GB HBM3</p>
           </div>
           <div className="rounded-lg bg-white/5 p-3 text-center">
             <p className="text-[10px] uppercase tracking-wider text-gray-500">vs Manual</p>
-            <p className="mt-1 text-2xl font-bold text-orange-400">30x</p>
+            <p className="mt-1 text-xl sm:text-2xl font-bold text-orange-400">30x</p>
             <p className="text-[10px] text-gray-500">faster response</p>
           </div>
         </div>

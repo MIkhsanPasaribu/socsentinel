@@ -70,10 +70,13 @@ export function PipelineFlowDiagram({
 
   return (
     <div className="glass-card overflow-x-auto">
-      <h4 className="mb-3 text-xs font-semibold uppercase tracking-wider text-cyan-400">
-        Pipeline Flow
-      </h4>
-      <div className="flex items-center gap-1 min-w-max">
+      <div className="mb-3 flex items-center justify-between">
+        <h4 className="text-xs font-semibold uppercase tracking-wider text-cyan-400">
+          Pipeline Flow
+        </h4>
+        <span className="text-[10px] text-gray-600 sm:hidden">&larr; scroll &rarr;</span>
+      </div>
+      <div className="flex items-center gap-1" style={{ minWidth: "max-content" }}>
         {nodes.map((node, i) => (
           <div key={node.id} className="flex items-center">
             {/* Node */}

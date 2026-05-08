@@ -10,6 +10,7 @@ import {
   Shield,
   Activity,
   Crosshair,
+  X,
 } from "lucide-react";
 import { cn } from "../../lib/utils";
 import { useInvestigationList } from "../../hooks/useInvestigations";
@@ -18,7 +19,13 @@ interface NavItem {
   label: string;
   path: string;
   icon: React.ReactNode;
-  badge?: number;
+}
+
+interface SidebarProps {
+  /** Whether the sidebar is open on mobile. */
+  open: boolean;
+  /** Callback to close the sidebar (mobile only). */
+  onClose: () => void;
 }
 
 const navItems: NavItem[] = [
@@ -30,11 +37,13 @@ const navItems: NavItem[] = [
   { label: "Audit Trail", path: "/audit", icon: <ClipboardList size={20} /> },
 ];
 
-export function Sidebar() {
+export function Sidebar({ open, onClose }: SidebarProps) {
   const { data: investigations } = useInvestigationList();
-  
-  const completedCount = investigations?.filter(i => i.status === "completed").length || 0;
-  const activeCount = investigations?.filter(i => i.status !== "completed").length || 0;
+
+  const completedCount =
+    investigations?.filter((i) => i.status === "completed").length || 0;
+  const activeCount =
+    investigations?.filter((i) => i.status !== "completed").length || 0;
 
   const getBadge = (path: string) => {
     if (path === "/investigation") return activeCount > 0 ? activeCount : undefined;
@@ -45,21 +54,35 @@ export function Sidebar() {
   return (
     <aside
       id="sidebar-nav"
-      className="fixed left-0 top-0 z-40 flex h-screen w-64 flex-col border-r border-white/10 bg-navy-900/95 backdrop-blur-xl"
+      className={cn(
+        "fixed left-0 top-0 z-40 flex h-screen w-64 flex-col border-r border-white/10 bg-navy-900/95 backdrop-blur-xl transition-transform duration-300 ease-in-out",
+        // Mobile: slide in/out. Desktop: always visible.
+        open ? "translate-x-0" : "-translate-x-full md:translate-x-0"
+      )}
     >
-      {/* Logo */}
-      <div className="flex h-16 items-center gap-3 border-b border-white/10 px-6">
-        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-cyan-400 to-blue-600">
-          <Shield size={20} className="text-white" />
+      {/* Logo + mobile close */}
+      <div className="flex h-16 items-center justify-between border-b border-white/10 px-6">
+        <div className="flex items-center gap-3">
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-cyan-400 to-blue-600">
+            <Shield size={20} className="text-white" />
+          </div>
+          <div>
+            <h1 className="text-lg font-bold tracking-tight text-white">
+              SOC<span className="text-cyan-400">sentinel</span>
+            </h1>
+            <p className="text-[10px] font-medium uppercase tracking-widest text-gray-500">
+              Multi-Agent SOC
+            </p>
+          </div>
         </div>
-        <div>
-          <h1 className="text-lg font-bold tracking-tight text-white">
-            SOC<span className="text-cyan-400">sentinel</span>
-          </h1>
-          <p className="text-[10px] font-medium uppercase tracking-widest text-gray-500">
-            Multi-Agent SOC
-          </p>
-        </div>
+        {/* Close button — mobile only */}
+        <button
+          onClick={onClose}
+          className="rounded-lg p-1.5 text-gray-400 hover:bg-white/10 hover:text-white md:hidden"
+          aria-label="Close sidebar"
+        >
+          <X size={20} />
+        </button>
       </div>
 
       {/* Navigation */}
@@ -69,6 +92,7 @@ export function Sidebar() {
             key={item.path}
             to={item.path}
             end={item.path === "/"}
+            onClick={onClose}
             className={({ isActive }) =>
               cn(
                 "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200",
@@ -81,12 +105,14 @@ export function Sidebar() {
             {item.icon}
             <span>{item.label}</span>
             {getBadge(item.path) !== undefined && (
-              <span className={cn(
-                "ml-auto flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-xs font-semibold",
-                item.path === "/investigation" 
-                  ? "bg-cyan-500/20 text-cyan-400 animate-pulse" 
-                  : "bg-emerald-500/20 text-emerald-400"
-              )}>
+              <span
+                className={cn(
+                  "ml-auto flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-xs font-semibold",
+                  item.path === "/investigation"
+                    ? "animate-pulse bg-cyan-500/20 text-cyan-400"
+                    : "bg-emerald-500/20 text-emerald-400"
+                )}
+              >
                 {getBadge(item.path)}
               </span>
             )}
