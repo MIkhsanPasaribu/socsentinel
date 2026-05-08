@@ -14,6 +14,7 @@ export interface SSEAgentEvent {
   confidence?: number | null;
   classification?: string | null;
   status?: string;
+  thinking_content?: string;
 }
 
 export interface SSEPipelineEvent {
@@ -28,6 +29,7 @@ export interface SSEPipelineEvent {
   severity?: string;
   rule_name?: string;
   total_agents?: number;
+  thinking_mode?: boolean;
 }
 
 export type SSEPhase =
@@ -47,6 +49,7 @@ export interface AgentStep {
   processing_time_ms?: number;
   confidence?: number | null;
   classification?: string | null;
+  thinking_content?: string;
 }
 
 export interface SSEState {
@@ -58,6 +61,7 @@ export interface SSEState {
   agents: AgentStep[];
   totalTimeMs: number | null;
   error: string | null;
+  thinkingMode: boolean;
 }
 
 const INITIAL_AGENTS: AgentStep[] = [
@@ -139,6 +143,7 @@ export function useSSEInvestigation(apiUrl: string) {
     agents: INITIAL_AGENTS.map((a) => ({ ...a })),
     totalTimeMs: null,
     error: null,
+    thinkingMode: false,
   });
 
   const eventSourceRef = useRef<EventSource | null>(null);
@@ -163,6 +168,7 @@ export function useSSEInvestigation(apiUrl: string) {
         agents: INITIAL_AGENTS.map((a) => ({ ...a })),
         totalTimeMs: null,
         error: null,
+        thinkingMode: false,
       });
 
       const es = new EventSource(
@@ -200,6 +206,7 @@ export function useSSEInvestigation(apiUrl: string) {
           severity: data.severity || null,
           ruleName: data.rule_name || null,
           agents: agents.map((agent) => ({ ...agent })),
+          thinkingMode: !!data.thinking_mode,
         }));
       });
 
@@ -238,6 +245,7 @@ export function useSSEInvestigation(apiUrl: string) {
                   processing_time_ms: data.processing_time_ms,
                   confidence: data.confidence,
                   classification: data.classification,
+                  thinking_content: data.thinking_content,
                 }
               : a,
           ),
@@ -299,6 +307,7 @@ export function useSSEInvestigation(apiUrl: string) {
       agents: INITIAL_AGENTS.map((a) => ({ ...a })),
       totalTimeMs: null,
       error: null,
+      thinkingMode: false,
     });
   }, []);
 
