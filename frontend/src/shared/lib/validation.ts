@@ -19,6 +19,13 @@ export const decisionSchema = z
       .trim()
       .max(500, "Notes must be 500 characters or fewer.")
       .optional(),
+    confidence_override: z
+      .number()
+      .min(0, "Confidence must be between 0 and 1.")
+      .max(1, "Confidence must be between 0 and 1.")
+      .nullable()
+      .optional(),
+    severity_override: z.string().nullable().optional(),
   })
   .superRefine((value, ctx) => {
     if (
@@ -29,6 +36,13 @@ export const decisionSchema = z
         code: z.ZodIssueCode.custom,
         path: ["notes"],
         message: "Notes are required for escalation or rejection.",
+      });
+    }
+    if (value.confidence_override != null && !value.notes) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["notes"],
+        message: "Notes are required when overriding confidence.",
       });
     }
   });
