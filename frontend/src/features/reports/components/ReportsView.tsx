@@ -26,6 +26,7 @@ import {
 import { useInvestigationsFull } from "../../../shared/hooks/useInvestigations";
 import type { Investigation } from "../../../shared/types";
 import { ExportButtons } from "./ExportButtons";
+import { SoarExportButton } from "./SoarExportButton";
 
 /** Download text content as a file. */
 function downloadAsFile(content: string, filename: string) {
@@ -90,6 +91,7 @@ function ReportCard({ investigation }: { investigation: Investigation }) {
         </div>
         <div className="relative flex items-center gap-2 self-end sm:self-start">
           <ExportButtons investigationId={investigation.investigation_id} />
+          <SoarExportButton investigationId={investigation.investigation_id} />
           <button className="rounded-lg bg-white/5 p-2 text-gray-400 transition-colors hover:bg-white/10 hover:text-white">
             {expanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
           </button>
