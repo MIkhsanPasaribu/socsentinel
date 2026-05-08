@@ -15,6 +15,7 @@ from app.core.logger import get_logger
 from app.shared.schemas import AlertInput, InvestigationStatus, PipelineState
 from app.shared.exceptions.base import PipelineError
 from app.shared.utils.escalation import determine_escalation_level
+from app.shared.database import save_investigation, load_investigation, load_all_investigations
 
 from app.features.orchestrator.service import route_alert
 from app.features.triage.service import classify_alert
@@ -28,8 +29,43 @@ from app.features.validator.service import validate_playbook
 
 logger = get_logger(__name__)
 
-# In-memory store for pipeline state (production would use a database)
+# In-memory cache for pipeline state (write-through to SQLite)
 _pipeline_store: dict[str, PipelineState] = {}
+_store_loaded: bool = False
+
+
+def _ensure_store_loaded() -> None:
+    """Load investigations from SQLite into memory cache on first access."""
+    global _store_loaded
+    if _store_loaded:
+        return
+    _store_loaded = True
+    try:
+        saved = load_all_investigations()
+        for inv_id, state_dict in saved.items():
+            try:
+                _pipeline_store[inv_id] = PipelineState(**state_dict)
+            except Exception:
+                pass  # Skip corrupted entries
+        if saved:
+            logger.info(
+                "Loaded investigations from database",
+                count=len(saved),
+            )
+    except Exception as e:
+        logger.warning("Failed to load investigations from database", error=str(e))
+
+
+def _persist_state(state: PipelineState) -> None:
+    """Persist pipeline state to SQLite (non-blocking best-effort)."""
+    try:
+        save_investigation(state.investigation_id, state.model_dump())
+    except Exception as e:
+        logger.warning(
+            "Failed to persist investigation",
+            investigation_id=state.investigation_id,
+            error=str(e),
+        )
 
 
 def _add_audit_entry(
@@ -141,8 +177,8 @@ async def run_investigation(
             )
             state.status = InvestigationStatus.COMPLETED
             state.completed_at = datetime.utcnow().isoformat()
-            state.total_processing_time_ms = (time.time() - pipeline_start) * 1000
             _pipeline_store[investigation_id] = state
+            _persist_state(state)
             return state
 
         # Step 3: Evidence Collection
@@ -274,6 +310,7 @@ async def run_investigation(
     finally:
         state.total_processing_time_ms = round((time.time() - pipeline_start) * 1000, 1)
         _pipeline_store[investigation_id] = state
+        _persist_state(state)
 
     logger.info(
         "Investigation pipeline completed",
@@ -288,13 +325,30 @@ async def run_investigation(
 def get_investigation(investigation_id: str) -> PipelineState | None:
     """Retrieve a pipeline state by investigation ID.
 
+    Checks in-memory cache first, then falls back to SQLite.
+
     Args:
         investigation_id: The unique investigation ID.
 
     Returns:
         PipelineState or None if not found.
     """
-    return _pipeline_store.get(investigation_id)
+    _ensure_store_loaded()
+
+    # Check cache first
+    if investigation_id in _pipeline_store:
+        return _pipeline_store[investigation_id]
+
+    # Fallback to DB
+    state_dict = load_investigation(investigation_id)
+    if state_dict:
+        try:
+            state = PipelineState(**state_dict)
+            _pipeline_store[investigation_id] = state
+            return state
+        except Exception:
+            return None
+    return None
 
 
 def list_investigations() -> list[dict[str, Any]]:
@@ -303,6 +357,8 @@ def list_investigations() -> list[dict[str, Any]]:
     Returns:
         List of investigation summary dicts.
     """
+    _ensure_store_loaded()
+
     summaries = []
     for inv_id, state in _pipeline_store.items():
         summaries.append({

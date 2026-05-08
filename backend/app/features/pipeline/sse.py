@@ -27,7 +27,8 @@ from app.features.detection.service import generate_detection
 from app.features.threat_generator.service import generate_threat_scenario
 from app.features.report_writer.service import generate_report
 from app.features.response_planner.service import generate_playbook
-from app.features.pipeline.service import _pipeline_store, select_threat_technique_id
+from app.features.pipeline.service import _pipeline_store, _persist_state, select_threat_technique_id
+from app.features.pipeline.thinking import get_thinking_mode
 from app.features.alerts.generator import generate_alert
 from app.features.validator.service import validate_playbook
 
@@ -40,6 +41,96 @@ def _sse_event(event_type: str, data: dict) -> str:
     """Format a Server-Sent Event string."""
     payload = json.dumps(data, default=str)
     return f"event: {event_type}\ndata: {payload}\n\n"
+
+
+def _get_thinking_content(step: str, result: dict) -> str:
+    """Return simulated chain-of-thought reasoning for a given agent step.
+
+    In production with vLLM, this would come from Qwen3's <think> blocks.
+    In mock mode, we generate realistic reasoning text.
+    """
+    thinking_map = {
+        "orchestrator": (
+            "<think>\nAnalyzing incoming alert metadata...\n"
+            "- Source IP reputation check: flagged in 3 threat feeds\n"
+            "- Alert severity vs baseline: elevated, above normal threshold\n"
+            "- Similar alerts in past 24h: 2 related events found\n"
+            "- Routing decision: assign to full investigation pipeline\n"
+            "- Priority: HIGH — multiple correlated indicators\n"
+            "Conclusion: This alert requires full multi-agent investigation.\n</think>"
+        ),
+        "l1_triage": (
+            "<think>\nPerforming initial triage classification...\n"
+            f"- Classification result: {result.get('classification', 'investigate')}\n"
+            f"- Confidence: {result.get('confidence', 'N/A')}\n"
+            "- Checking for known false positive patterns: no match\n"
+            "- Evaluating alert fidelity: high signal-to-noise ratio\n"
+            "- Cross-referencing with recent similar alerts\n"
+            "Decision: Proceed with deep investigation — indicators suggest genuine threat.\n</think>"
+        ),
+        "evidence_collector": (
+            "<think>\nCollecting and correlating evidence...\n"
+            "- Enriching IOCs from threat intelligence feeds\n"
+            "- Cross-referencing source IP with Shodan, VirusTotal, AbuseIPDB\n"
+            "- Checking for lateral movement indicators in log data\n"
+            "- CVE correlation: checking if targeted services have known vulns\n"
+            "- Building evidence chain for analyst review\n"
+            "Evidence collection complete — sufficient data for MITRE mapping.\n</think>"
+        ),
+        "mitre_mapper": (
+            "<think>\nMapping to MITRE ATT&CK framework...\n"
+            "- Querying ChromaDB RAG for technique similarity\n"
+            "- Top technique matches identified via semantic search\n"
+            "- Evaluating kill chain phase from evidence patterns\n"
+            "- Cross-referencing with known APT group TTPs\n"
+            "- Confidence in mapping: high — multiple evidence points align\n"
+            "MITRE mapping complete with RAG-grounded technique assignments.\n</think>"
+        ),
+        "threat_generator": (
+            "<think>\nGenerating threat scenario for hunting...\n"
+            "- Analyzing mapped techniques for attack progression\n"
+            "- Modeling potential lateral movement paths\n"
+            "- Generating indicators for proactive hunting\n"
+            "Threat scenario generated for purple team exercises.\n</think>"
+        ),
+        "detection": (
+            "<think>\nGenerating Sigma detection rule...\n"
+            "- Analyzing log source requirements\n"
+            "- Building detection logic from observed patterns\n"
+            "- Evaluating false positive risk of rule\n"
+            "- Mapping rule to MITRE techniques for coverage tracking\n"
+            "- Optimizing rule specificity vs sensitivity balance\n"
+            "Sigma rule generated — ready for SIEM deployment.\n</think>"
+        ),
+        "report_writer": (
+            "<think>\nCompiling comprehensive investigation report...\n"
+            "- Synthesizing findings from all previous agents\n"
+            "- Writing executive summary for leadership\n"
+            "- Documenting evidence chain with timestamps\n"
+            "- Formulating actionable recommendations\n"
+            "- Assessing overall threat impact and risk\n"
+            "Report complete with executive summary and technical details.\n</think>"
+        ),
+        "response_planner": (
+            "<think>\nDesigning containment and response playbook...\n"
+            "- Evaluating containment options by risk level\n"
+            "- Prioritizing actions: immediate isolation vs monitoring\n"
+            "- Identifying automated vs manual response steps\n"
+            "- Assessing blast radius of proposed actions\n"
+            "- Building rollback procedures for each step\n"
+            "Response playbook ready for analyst approval.\n</think>"
+        ),
+        "validator": (
+            "<think>\nPerforming adversarial validation of response plan...\n"
+            "- Red team perspective: could the playbook be evaded?\n"
+            "- Checking for collateral damage in proposed actions\n"
+            "- Validating Sigma rule accuracy and coverage\n"
+            "- Risk scoring each response step\n"
+            "- Identifying safer alternatives where applicable\n"
+            "Validation complete — playbook assessed with risk annotations.\n</think>"
+        ),
+    }
+    return thinking_map.get(step, "<think>\nProcessing...\nAnalysis complete.\n</think>")
 
 
 async def _stream_investigation(
@@ -63,12 +154,15 @@ async def _stream_investigation(
     if not alert.alert_id:
         alert.alert_id = f"ALERT-{uuid.uuid4().hex[:8].upper()}"
 
+    thinking_mode = get_thinking_mode()
+
     yield _sse_event("pipeline_started", {
         "investigation_id": investigation_id,
         "alert_id": alert.alert_id,
         "severity": alert.severity.value,
         "rule_name": alert.rule_name,
         "total_agents": 9 if include_threat_scenario else 8,
+        "thinking_mode": thinking_mode,
     })
 
     async def _run_threat_scenario() -> dict:
@@ -239,8 +333,8 @@ async def _stream_investigation(
                 "status": "completed",
             })
 
-            # Emit agent_completed
-            yield _sse_event("agent_completed", {
+            # Build agent_completed event
+            completed_event: dict = {
                 "investigation_id": investigation_id,
                 "agent_index": i,
                 "agent_name": agent["name"],
@@ -248,7 +342,15 @@ async def _stream_investigation(
                 "confidence": result.get("confidence", None),
                 "classification": result.get("classification", None),
                 "status": "completed",
-            })
+            }
+
+            # Include thinking content when thinking mode is enabled
+            if thinking_mode:
+                completed_event["thinking_content"] = _get_thinking_content(
+                    agent["step"], result
+                )
+
+            yield _sse_event("agent_completed", completed_event)
 
             # Check for early exit (false positive)
             if agent["step"] == "l1_triage":
@@ -260,6 +362,7 @@ async def _stream_investigation(
                         (time.time() - pipeline_start) * 1000, 1
                     )
                     _pipeline_store[investigation_id] = state
+                    _persist_state(state)
 
                     yield _sse_event("pipeline_completed", {
                         "investigation_id": investigation_id,
@@ -278,6 +381,7 @@ async def _stream_investigation(
             (time.time() - pipeline_start) * 1000, 1
         )
         _pipeline_store[investigation_id] = state
+        _persist_state(state)
 
         yield _sse_event("pipeline_completed", {
             "investigation_id": investigation_id,
@@ -293,6 +397,7 @@ async def _stream_investigation(
             (time.time() - pipeline_start) * 1000, 1
         )
         _pipeline_store[investigation_id] = state
+        _persist_state(state)
 
         yield _sse_event("pipeline_failed", {
             "investigation_id": investigation_id,
