@@ -11,15 +11,6 @@ from app.shared.schemas import APIResponse
 from app.shared.exceptions.base import NotFoundError
 from app.core.logger import get_logger
 
-from .service import export_investigation_docx
-from .pdf_generator import WEASYPRINT_AVAILABLE
-
-# Only import PDF export if WeasyPrint is available
-if WEASYPRINT_AVAILABLE:
-    from .service import export_investigation_pdf
-else:
-    export_investigation_pdf = None
-
 logger = get_logger(__name__)
 
 router = APIRouter(prefix="/report-export", tags=["Report Export"])
@@ -41,10 +32,17 @@ async def export_pdf_endpoint(investigation_id: str) -> StreamingResponse:
     Raises:
         HTTPException: If investigation not found or generation fails.
     """
+    from .pdf_generator import WEASYPRINT_AVAILABLE
+    from .service import export_investigation_pdf
+
     if not WEASYPRINT_AVAILABLE:
         raise HTTPException(
             status_code=503,
-            detail="PDF export is not available. WeasyPrint system dependencies (cairo, pango) are not installed. PDF export works in Docker/Linux environments.",
+            detail=(
+                "PDF export is not available. "
+                "WeasyPrint system dependencies (cairo, pango) are not installed. "
+                "PDF export works in Docker/Linux environments."
+            ),
         )
 
     try:
@@ -94,6 +92,8 @@ async def export_docx_endpoint(investigation_id: str) -> StreamingResponse:
     Raises:
         HTTPException: If investigation not found or generation fails.
     """
+    from .service import export_investigation_docx
+
     try:
         docx_buffer = await export_investigation_docx(investigation_id)
 
@@ -134,22 +134,13 @@ async def list_export_formats() -> APIResponse:
 
     Returns information about supported export formats.
     """
-    formats = [
-        {
-            "id": "docx",
-            "name": "Microsoft Word",
-            "description": "Editable Word document for sharing and editing",
-            "mime_type": (
-                "application/vnd.openxmlformats-officedocument."
-                "wordprocessingml.document"
-            ),
-            "extension": "docx",
-            "available": True,
-        },
-    ]
+    from .pdf_generator import WEASYPRINT_AVAILABLE
+    from .docx_generator import DOCX_AVAILABLE
+
+    formats = []
 
     if WEASYPRINT_AVAILABLE:
-        formats.insert(0, {
+        formats.append({
             "id": "pdf",
             "name": "PDF Document",
             "description": "Professional formatted PDF report with branding",
@@ -158,17 +149,33 @@ async def list_export_formats() -> APIResponse:
             "available": True,
         })
     else:
-        formats.insert(0, {
+        formats.append({
             "id": "pdf",
-            "name": "PDF Document (Unavailable)",
-            "description": "PDF export requires system dependencies (cairo, pango). Available in Docker/Linux.",
+            "name": "PDF Document",
+            "description": "Requires system dependencies (cairo, pango). Available in Docker/Linux.",
             "mime_type": "application/pdf",
             "extension": "pdf",
             "available": False,
         })
 
+    formats.append({
+        "id": "docx",
+        "name": "Microsoft Word",
+        "description": "Editable Word document for sharing and editing",
+        "mime_type": (
+            "application/vnd.openxmlformats-officedocument."
+            "wordprocessingml.document"
+        ),
+        "extension": "docx",
+        "available": DOCX_AVAILABLE,
+    })
+
     return APIResponse(
         success=True,
         message="Available export formats",
-        data={"formats": formats, "pdf_available": WEASYPRINT_AVAILABLE},
+        data={
+            "formats": formats,
+            "pdf_available": WEASYPRINT_AVAILABLE,
+            "docx_available": DOCX_AVAILABLE,
+        },
     )

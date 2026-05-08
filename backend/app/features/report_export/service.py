@@ -12,9 +12,6 @@ from app.core.logger import get_logger
 from app.shared.schemas import PipelineState
 from app.features.pipeline.service import get_investigation
 
-from .pdf_generator import generate_pdf
-from .docx_generator import generate_docx
-
 logger = get_logger(__name__)
 
 
@@ -56,7 +53,6 @@ def build_report_context(state: PipelineState) -> dict[str, Any]:
     # Normalize MITRE result
     mitre = state.mitre_result or {}
     techniques = mitre.get("techniques", [])
-    # Handle both old and new field names
     normalized_techniques = []
     for t in techniques:
         normalized_techniques.append({
@@ -186,6 +182,8 @@ async def export_investigation_pdf(investigation_id: str) -> BytesIO:
     Raises:
         ValueError: If investigation not found.
     """
+    from .pdf_generator import generate_pdf
+
     state = get_investigation(investigation_id)
     if not state:
         raise ValueError(f"Investigation not found: {investigation_id}")
@@ -214,6 +212,8 @@ async def export_investigation_docx(investigation_id: str) -> BytesIO:
     Raises:
         ValueError: If investigation not found.
     """
+    from .docx_generator import generate_docx
+
     state = get_investigation(investigation_id)
     if not state:
         raise ValueError(f"Investigation not found: {investigation_id}")

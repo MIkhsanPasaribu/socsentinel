@@ -2,13 +2,14 @@
 SOCsentinel — PDF Report Generator.
 
 Generates professional PDF reports using WeasyPrint.
+WeasyPrint requires system-level dependencies (cairo, pango, gdk-pixbuf)
+which are only available in Linux/Docker. On Windows dev environments
+PDF export gracefully returns an error.
 """
 
 import os
 from io import BytesIO
 from typing import Any
-
-from jinja2 import Environment, FileSystemLoader
 
 from app.core.logger import get_logger
 
@@ -17,17 +18,17 @@ logger = get_logger(__name__)
 # Template directory path
 TEMPLATE_DIR = os.path.join(os.path.dirname(__file__), "templates")
 
-# Try to import WeasyPrint - may fail on Windows without GTK
-try:
-    from weasyprint import HTML, CSS
-    WEASYPRINT_AVAILABLE = True
-except (ImportError, OSError) as e:
-    WEASYPRINT_AVAILABLE = False
-    logger.warning(
-        "WeasyPrint not available - PDF generation will be disabled. "
-        "Install system dependencies (cairo, pango) to enable PDF export.",
-        error=str(e),
-    )
+
+def _check_weasyprint() -> bool:
+    """Check whether WeasyPrint can be imported at runtime."""
+    try:
+        import weasyprint  # noqa: F401
+        return True
+    except (ImportError, OSError):
+        return False
+
+
+WEASYPRINT_AVAILABLE = _check_weasyprint()
 
 
 def generate_pdf(context: dict[str, Any]) -> BytesIO:
@@ -51,6 +52,10 @@ def generate_pdf(context: dict[str, Any]) -> BytesIO:
             "WeasyPrint system dependencies (cairo, pango) are not installed. "
             "PDF export works in Docker/Linux environments."
         )
+
+    # Lazy imports — only reached when WeasyPrint is confirmed available
+    from jinja2 import Environment, FileSystemLoader
+    from weasyprint import HTML, CSS
 
     # Load templates
     env = Environment(loader=FileSystemLoader(TEMPLATE_DIR))
