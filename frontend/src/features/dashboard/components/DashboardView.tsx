@@ -20,6 +20,8 @@ import { useMutation } from "@tanstack/react-query";
 import { apiClient } from "../../../shared/lib/api";
 import { getSeverityBadgeClass, formatRelativeTime } from "../../../shared/lib/utils";
 import { MitreHeatmap } from "./MitreHeatmap";
+import { BusinessValueCard } from "./BusinessValueCard";
+import { FeedbackLoopCard } from "./FeedbackLoopCard";
 
 /** Stat card for the dashboard overview. */
 function StatCard({
@@ -256,6 +258,15 @@ export function DashboardView() {
           }
         />
       </div>
+
+      {/* Business Value Impact */}
+      <BusinessValueCard
+        totalInvestigations={stats?.total_investigations ?? 0}
+        avgProcessingTimeMs={stats?.avg_processing_time_ms ?? 0}
+      />
+
+      {/* Self-Improving Feedback Loop */}
+      <FeedbackLoopCard />
 
       {/* GPU Performance Panel */}
       <div className="rounded-xl border border-cyan-500/20 bg-gradient-to-br from-cyan-500/5 to-blue-600/5 p-4 sm:p-6">
