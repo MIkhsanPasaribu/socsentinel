@@ -26,7 +26,7 @@ class Settings(BaseSettings):
         default="vllm", description="LLM provider: vllm | mock"
     )
     vllm_base_url: str = Field(
-        default="http://localhost:8080/v1",
+        default="http://localhost:8000/v1",
         description="vLLM OpenAI-compatible API base URL",
     )
     qwen3_7b_model: str = Field(
