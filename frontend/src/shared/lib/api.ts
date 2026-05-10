@@ -11,9 +11,22 @@ export const apiClient = axios.create({
   },
 });
 
+// Polyfill for crypto.randomUUID (older browsers or Node.js without Web Crypto)
+function generateUUID(): string {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+  // Fallback: simple UUID v4 implementation
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === "x" ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+}
+
 // Request interceptor — add request ID
 apiClient.interceptors.request.use((config) => {
-  config.headers["x-request-id"] = crypto.randomUUID();
+  config.headers["x-request-id"] = generateUUID();
   return config;
 });
 
