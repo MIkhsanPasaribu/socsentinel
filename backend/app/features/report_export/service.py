@@ -138,7 +138,7 @@ def build_report_context(state: PipelineState) -> dict[str, Any]:
 
     return {
         "investigation_id": state.investigation_id,
-        "generated_at": datetime.utcnow().isoformat(),
+        "generated_at": datetime.utcnow().isoformat() + "Z",
         "generated_at_formatted": datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC"),
         "alert": {
             "alert_id": alert.alert_id,

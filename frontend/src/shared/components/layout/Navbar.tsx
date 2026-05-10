@@ -1,6 +1,6 @@
 /** SOCsentinel — Top navigation bar component. */
 
-import { Bell, Menu, Settings, User, Zap } from "lucide-react";
+import { Menu, User, Zap } from "lucide-react";
 
 interface NavbarProps {
   /** Callback to toggle the mobile sidebar. */
@@ -34,27 +34,6 @@ export function Navbar({ onMenuToggle }: NavbarProps) {
 
       {/* Right — Actions */}
       <div className="flex items-center gap-1 sm:gap-2">
-        {/* Notifications */}
-        <button
-          id="btn-notifications"
-          className="relative rounded-lg p-2 text-gray-400 transition-colors hover:bg-white/5 hover:text-white"
-          title="Notifications"
-        >
-          <Bell size={18} className="sm:h-5 sm:w-5" />
-          <span className="absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-alert-orange text-[10px] font-bold text-white">
-            3
-          </span>
-        </button>
-
-        {/* Settings */}
-        <button
-          id="btn-settings"
-          className="rounded-lg p-2 text-gray-400 transition-colors hover:bg-white/5 hover:text-white"
-          title="Settings"
-        >
-          <Settings size={18} className="sm:h-5 sm:w-5" />
-        </button>
-
         {/* User avatar */}
         <button
           id="btn-user-menu"

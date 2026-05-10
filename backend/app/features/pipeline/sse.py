@@ -324,7 +324,7 @@ async def _stream_investigation(
 
             # Add audit entry
             state.audit_trail.append({
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.utcnow().isoformat() + "Z",
                 "step": agent["step"],
                 "agent": agent["name"],
                 "processing_time_ms": step_time,
@@ -356,7 +356,7 @@ async def _stream_investigation(
                 classification = result.get("classification", "investigate")
                 if classification == "close":
                     state.status = InvestigationStatus.COMPLETED
-                    state.completed_at = datetime.utcnow().isoformat()
+                    state.completed_at = datetime.utcnow().isoformat() + "Z"
                     state.total_processing_time_ms = round(
                         (time.time() - pipeline_start) * 1000, 1
                     )
@@ -375,7 +375,7 @@ async def _stream_investigation(
 
         # Pipeline complete
         state.status = InvestigationStatus.COMPLETED
-        state.completed_at = datetime.utcnow().isoformat()
+        state.completed_at = datetime.utcnow().isoformat() + "Z"
         state.total_processing_time_ms = round(
             (time.time() - pipeline_start) * 1000, 1
         )
@@ -391,7 +391,7 @@ async def _stream_investigation(
 
     except Exception as e:
         state.status = InvestigationStatus.FAILED
-        state.completed_at = datetime.utcnow().isoformat()
+        state.completed_at = datetime.utcnow().isoformat() + "Z"
         state.total_processing_time_ms = round(
             (time.time() - pipeline_start) * 1000, 1
         )

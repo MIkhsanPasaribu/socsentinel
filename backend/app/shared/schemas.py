@@ -103,7 +103,7 @@ class AlertInput(BaseModel):
     """Raw SIEM alert input."""
     alert_id: str = ""
     source: str = "siem"
-    timestamp: str = Field(default_factory=lambda: datetime.utcnow().isoformat())
+    timestamp: str = Field(default_factory=lambda: datetime.utcnow().isoformat() + "Z" + "Z")
     rule_name: str = ""
     severity: Severity = Severity.MEDIUM
     description: str = ""
@@ -125,7 +125,7 @@ class PipelineState(BaseModel):
     investigation_id: str = ""
     alert: AlertInput
     status: InvestigationStatus = InvestigationStatus.PENDING
-    started_at: str = Field(default_factory=lambda: datetime.utcnow().isoformat())
+    started_at: str = Field(default_factory=lambda: datetime.utcnow().isoformat() + "Z" + "Z")
     completed_at: str | None = None
 
     # Agent outputs (filled progressively)

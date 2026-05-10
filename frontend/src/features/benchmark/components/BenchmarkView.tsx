@@ -73,7 +73,7 @@ export function BenchmarkView() {
 
   const benchmarkMutation = useMutation({
     mutationFn: async () => {
-      const res = await apiClient.post<APIResponse>("/pipeline/benchmark");
+      const res = await apiClient.post<APIResponse>("/pipeline/benchmark", undefined, { timeout: 300000 });
       return res.data.data as BenchmarkResult;
     },
     onSuccess: (data) => setResult(data),
@@ -160,7 +160,7 @@ export function BenchmarkView() {
       {result && (
         <div className="animate-slide-up grid grid-cols-1 gap-4 lg:grid-cols-2">
           {/* Per-Scenario Latency */}
-          <div className="glass-card">
+          <div className="glass-card min-w-0 overflow-hidden">
             <h3 className="mb-4 flex items-center gap-2 text-sm font-semibold text-white">
               <Clock size={14} className="text-cyan-400" />
               Per-Scenario Latency
@@ -181,7 +181,7 @@ export function BenchmarkView() {
           </div>
 
           {/* Per-Agent Performance */}
-          <div className="glass-card">
+          <div className="glass-card min-w-0 overflow-hidden">
             <h3 className="mb-4 flex items-center gap-2 text-sm font-semibold text-white">
               <Zap size={14} className="text-cyan-400" />
               Per-Agent Avg Latency

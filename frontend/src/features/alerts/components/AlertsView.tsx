@@ -75,6 +75,7 @@ export function AlertsView() {
     onSuccess: () => {
       setInvestigating(null);
       queryClient.invalidateQueries({ queryKey: ["investigations"] });
+      queryClient.invalidateQueries({ queryKey: ["investigations-full"] });
     },
   });
 

@@ -77,7 +77,7 @@ def _add_audit_entry(
 ) -> None:
     """Add an audit trail entry to the pipeline state."""
     entry = {
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.utcnow().isoformat() + "Z",
         "step": step,
         "agent": result.get("_agent", step),
         "processing_time_ms": result.get("_processing_time_ms", 0),
@@ -160,7 +160,7 @@ async def run_investigation(
         )
         state.escalation_result = escalation
         state.audit_trail.append({
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.utcnow().isoformat() + "Z",
             "step": "escalation_check",
             "agent": "Escalation Engine",
             "level": escalation["level"],
@@ -176,7 +176,7 @@ async def run_investigation(
                 investigation_id=investigation_id,
             )
             state.status = InvestigationStatus.COMPLETED
-            state.completed_at = datetime.utcnow().isoformat()
+            state.completed_at = datetime.utcnow().isoformat() + "Z"
             _pipeline_store[investigation_id] = state
             _persist_state(state)
             return state
@@ -244,7 +244,7 @@ async def run_investigation(
         if escalation_post_mitre["level"] != escalation["level"]:
             state.escalation_result = escalation_post_mitre
             state.audit_trail.append({
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.utcnow().isoformat() + "Z",
                 "step": "escalation_upgrade",
                 "agent": "Escalation Engine",
                 "previous_level": escalation["level"],
@@ -288,13 +288,13 @@ async def run_investigation(
 
         # Complete
         state.status = InvestigationStatus.COMPLETED
-        state.completed_at = datetime.utcnow().isoformat()
+        state.completed_at = datetime.utcnow().isoformat() + "Z"
 
     except Exception as e:
         state.status = InvestigationStatus.FAILED
-        state.completed_at = datetime.utcnow().isoformat()
+        state.completed_at = datetime.utcnow().isoformat() + "Z"
         state.audit_trail.append({
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.utcnow().isoformat() + "Z",
             "step": "pipeline_error",
             "error": str(e),
             "status": "failed",

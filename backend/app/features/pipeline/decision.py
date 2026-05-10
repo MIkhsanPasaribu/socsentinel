@@ -64,7 +64,7 @@ async def record_decision(investigation_id: str, req: DecisionRequest) -> APIRes
     decision_record = {
         "decision": req.decision,
         "analyst_notes": req.analyst_notes,
-        "decided_at": datetime.utcnow().isoformat(),
+        "decided_at": datetime.utcnow().isoformat() + "Z",
         "investigation_status_at_decision": state.status.value,
         "confidence_override": req.confidence_override,
         "severity_override": req.severity_override,
@@ -74,7 +74,7 @@ async def record_decision(investigation_id: str, req: DecisionRequest) -> APIRes
 
     # Add to audit trail
     audit_entry = {
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.utcnow().isoformat() + "Z",
         "step": "human_decision",
         "agent": "Human Analyst",
         "action": req.decision,
@@ -93,7 +93,7 @@ async def record_decision(investigation_id: str, req: DecisionRequest) -> APIRes
     elif req.decision == "escalate":
         # Keep as completed but mark escalation in audit
         state.audit_trail.append({
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.utcnow().isoformat() + "Z",
             "step": "l3_escalation",
             "agent": "Human Analyst",
             "action": "escalated_to_l3",
