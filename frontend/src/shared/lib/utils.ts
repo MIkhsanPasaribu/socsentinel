@@ -11,6 +11,7 @@ export function cn(...inputs: ClassValue[]): string {
 export function formatRelativeTime(date: Date | string): string {
   const now = new Date();
   const target = new Date(date);
+  if (isNaN(target.getTime())) return "N/A";
   const diffMs = now.getTime() - target.getTime();
   const diffSec = Math.floor(diffMs / 1000);
   const diffMin = Math.floor(diffSec / 60);
