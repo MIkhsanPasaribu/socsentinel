@@ -7,7 +7,6 @@ import {
   Search,
   FileText,
   ClipboardList,
-  Shield,
   Activity,
   Crosshair,
   Gauge,
@@ -65,9 +64,11 @@ export function Sidebar({ open, onClose }: SidebarProps) {
       {/* Logo + mobile close */}
       <div className="flex h-16 items-center justify-between border-b border-white/10 px-6">
         <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-cyan-400 to-blue-600">
-            <Shield size={20} className="text-white" />
-          </div>
+          <img 
+            src="/logo.png" 
+            alt="SOCsentinel Logo" 
+            className="h-10 w-auto object-contain" 
+          />
           <div>
             <h1 className="text-lg font-bold tracking-tight text-white">
               SOC<span className="text-cyan-400">sentinel</span>
