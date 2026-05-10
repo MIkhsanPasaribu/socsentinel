@@ -159,7 +159,7 @@ function ReportCard({ investigation }: { investigation: Investigation }) {
                 <Target size={14} /> MITRE ATT&CK Mapping
               </h4>
               <div className="space-y-1.5">
-                {mitre.techniques.map((t: Record<string, string>, i: number) => (
+                {Array.isArray(mitre.techniques) && mitre.techniques.map((t: Record<string, string>, i: number) => (
                   <div
                     key={i}
                     className="flex items-center gap-3 rounded-lg bg-white/5 px-3 py-2"
@@ -222,7 +222,7 @@ function ReportCard({ investigation }: { investigation: Investigation }) {
 
               {/* Detection metadata grid */}
               <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
-                {detection.mitre_techniques_mapped && detection.mitre_techniques_mapped.length > 0 && (
+                {Array.isArray(detection.mitre_techniques_mapped) && detection.mitre_techniques_mapped.length > 0 && (
                   <div className="rounded-lg bg-white/5 p-2.5">
                     <p className="text-[10px] uppercase text-gray-500">Techniques</p>
                     <p className="text-xs font-semibold text-red-400">
@@ -252,7 +252,7 @@ function ReportCard({ investigation }: { investigation: Investigation }) {
                     </p>
                   </div>
                 )}
-                {detection.recommended_log_sources && detection.recommended_log_sources.length > 0 && (
+                {Array.isArray(detection.recommended_log_sources) && detection.recommended_log_sources.length > 0 && (
                   <div className="rounded-lg bg-white/5 p-2.5">
                     <p className="text-[10px] uppercase text-gray-500">Log Sources</p>
                     <p className="text-xs font-semibold text-gray-300">
@@ -279,7 +279,7 @@ function ReportCard({ investigation }: { investigation: Investigation }) {
                 <AlertTriangle size={14} /> Indicators of Compromise
               </h4>
               <div className="space-y-1">
-                {evidence.iocs.map((ioc: Record<string, string>, i: number) => (
+                {Array.isArray(evidence.iocs) && evidence.iocs.map((ioc: Record<string, string>, i: number) => (
                   <div key={i} className="flex items-center gap-2 text-xs">
                     <span className="rounded bg-orange-500/20 px-1.5 py-0.5 font-mono text-[10px] text-orange-400">
                       {ioc.type || "IOC"}
@@ -298,7 +298,7 @@ function ReportCard({ investigation }: { investigation: Investigation }) {
                 Recommendations
               </h4>
               <ul className="space-y-1">
-                {report.recommendations.map((rec: string, i: number) => (
+                {Array.isArray(report.recommendations) && report.recommendations.map((rec: string, i: number) => (
                   <li key={i} className="flex items-start gap-2 text-xs text-gray-300">
                     <span className="mt-0.5 text-cyan-400">→</span> {rec}
                   </li>
@@ -324,7 +324,7 @@ function ReportCard({ investigation }: { investigation: Investigation }) {
                 </div>
                 
                 <div className="space-y-2">
-                  {response.steps.map((step: any, i: number) => (
+                  {Array.isArray(response.steps) && response.steps.map((step: any, i: number) => (
                     <div key={i} className="flex gap-3 rounded-md bg-white/5 p-2">
                       <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-500/20 text-[10px] font-bold text-emerald-400">
                         {step.order || i + 1}
@@ -379,7 +379,7 @@ function ReportCard({ investigation }: { investigation: Investigation }) {
                     <div className="mt-3 border-t border-white/10 pt-2">
                       <p className="mb-1 text-[10px] uppercase text-gray-500">Safer Alternatives:</p>
                       <ul className="space-y-1">
-                        {validator.safe_alternatives.map((alt: string, i: number) => (
+                        {Array.isArray(validator.safe_alternatives) && validator.safe_alternatives.map((alt: string, i: number) => (
                           <li key={i} className="flex items-start gap-2 text-xs text-orange-400">
                             <span className="mt-0.5 text-orange-500">→</span> {alt}
                           </li>

@@ -31,9 +31,17 @@ interface SidebarProps {
 const navItems: NavItem[] = [
   { label: "Dashboard", path: "/", icon: <LayoutDashboard size={20} /> },
   { label: "Alerts", path: "/alerts", icon: <Bell size={20} /> },
-  { label: "Investigation", path: "/investigation", icon: <Search size={20} /> },
+  {
+    label: "Investigation",
+    path: "/investigation",
+    icon: <Search size={20} />,
+  },
   { label: "Reports", path: "/reports", icon: <FileText size={20} /> },
-  { label: "Threat Hunting", path: "/threat-hunting", icon: <Crosshair size={20} /> },
+  {
+    label: "Threat Hunting",
+    path: "/threat-hunting",
+    icon: <Crosshair size={20} />,
+  },
   { label: "Audit Trail", path: "/audit", icon: <ClipboardList size={20} /> },
   { label: "Benchmark", path: "/benchmark", icon: <Gauge size={20} /> },
 ];
@@ -47,8 +55,10 @@ export function Sidebar({ open, onClose }: SidebarProps) {
     investigations?.filter((i) => i.status !== "completed").length || 0;
 
   const getBadge = (path: string) => {
-    if (path === "/investigation") return activeCount > 0 ? activeCount : undefined;
-    if (path === "/reports") return completedCount > 0 ? completedCount : undefined;
+    if (path === "/investigation")
+      return activeCount > 0 ? activeCount : undefined;
+    if (path === "/reports")
+      return completedCount > 0 ? completedCount : undefined;
     return undefined;
   };
 
@@ -58,16 +68,16 @@ export function Sidebar({ open, onClose }: SidebarProps) {
       className={cn(
         "fixed left-0 top-0 z-40 flex h-screen w-64 flex-col border-r border-white/10 bg-navy-900/95 backdrop-blur-xl transition-transform duration-300 ease-in-out",
         // Mobile: slide in/out. Desktop: always visible.
-        open ? "translate-x-0" : "-translate-x-full md:translate-x-0"
+        open ? "translate-x-0" : "-translate-x-full md:translate-x-0",
       )}
     >
       {/* Logo + mobile close */}
       <div className="flex h-16 items-center justify-between border-b border-white/10 px-6">
         <div className="flex items-center gap-3">
-          <img 
-            src="/logo.png" 
-            alt="SOCsentinel Logo" 
-            className="h-10 w-auto object-contain" 
+          <img
+            src="/logo.png"
+            alt="SOCsentinel Logo"
+            className="h-10 w-auto object-contain"
           />
           <div>
             <h1 className="text-lg font-bold tracking-tight text-white">
@@ -101,7 +111,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
                 "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200",
                 isActive
                   ? "bg-cyan-500/10 text-cyan-400 glow-cyan"
-                  : "text-gray-400 hover:bg-white/5 hover:text-gray-200"
+                  : "text-gray-400 hover:bg-white/5 hover:text-gray-200",
               )
             }
           >
@@ -113,7 +123,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
                   "ml-auto flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-xs font-semibold",
                   item.path === "/investigation"
                     ? "animate-pulse bg-cyan-500/20 text-cyan-400"
-                    : "bg-emerald-500/20 text-emerald-400"
+                    : "bg-emerald-500/20 text-emerald-400",
                 )}
               >
                 {getBadge(item.path)}

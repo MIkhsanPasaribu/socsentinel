@@ -48,31 +48,42 @@ async def run_benchmark() -> APIResponse:
         alert = generate_alert(scenario)
         scenario_start = time.time()
 
-        state = await run_investigation(alert)
+        try:
+            state = await run_investigation(alert)
 
-        scenario_time = round((time.time() - scenario_start) * 1000, 1)
+            scenario_time = round((time.time() - scenario_start) * 1000, 1)
 
-        # Extract per-agent timing from audit trail
-        agent_times: dict[str, float] = {}
-        for entry in state.audit_trail:
-            if entry.get("processing_time_ms") is not None:
-                agent_times[entry["agent"]] = entry["processing_time_ms"]
+            # Extract per-agent timing from audit trail
+            agent_times: dict[str, float] = {}
+            for entry in state.audit_trail:
+                if entry.get("processing_time_ms") is not None:
+                    agent_times[entry["agent"]] = entry["processing_time_ms"]
 
-        results.append({
-            "scenario": scenario,
-            "investigation_id": state.investigation_id,
-            "status": state.status.value,
-            "total_time_ms": scenario_time,
-            "agent_times": agent_times,
-            "severity": alert.severity.value,
-            "escalation_level": (
-                state.escalation_result.get("level", "L1")
-                if state.escalation_result
-                else "L1"
-            ),
-        })
+            results.append({
+                "scenario": scenario,
+                "investigation_id": state.investigation_id,
+                "status": state.status.value,
+                "total_time_ms": scenario_time,
+                "agent_times": agent_times,
+                "severity": alert.severity.value,
+                "escalation_level": (
+                    state.escalation_result.get("level", "L1")
+                    if state.escalation_result
+                    else "L1"
+                ),
+            })
+        except Exception as e:
+            logger.error(f"Benchmark scenario '{scenario}' failed: {str(e)}")
+            # Skip this scenario and continue with others
 
     total_benchmark_time = round((time.time() - benchmark_start) * 1000, 1)
+
+    if not results:
+        return APIResponse(
+            success=False,
+            message="All benchmark scenarios failed.",
+            error={"detail": "Check backend logs for agent execution errors."}
+        )
 
     # Compute aggregates
     all_times = [r["total_time_ms"] for r in results]

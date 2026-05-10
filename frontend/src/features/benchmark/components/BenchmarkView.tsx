@@ -73,7 +73,7 @@ export function BenchmarkView() {
 
   const benchmarkMutation = useMutation({
     mutationFn: async () => {
-      const res = await apiClient.post<APIResponse>("/pipeline/benchmark", undefined, { timeout: 300000 });
+      const res = await apiClient.post<APIResponse>("/pipeline/benchmark", undefined, { timeout: 600000 });
       return res.data.data as BenchmarkResult;
     },
     onSuccess: (data) => setResult(data),
