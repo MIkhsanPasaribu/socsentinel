@@ -30,6 +30,7 @@ node_modules/
 # === Build ===
 frontend/dist/
 backend/data/chroma_db/
+backend/data/*.db
 
 # === Data (large files) ===
 data/mitre_attack/enterprise-attack.json
