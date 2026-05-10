@@ -102,7 +102,8 @@ async def run_agent(
 def _extract_json(text: str, agent_name: str) -> dict[str, Any]:
     """Extract JSON from LLM response text.
 
-    Handles cases where the LLM wraps JSON in markdown code blocks.
+    Handles cases where the LLM wraps JSON in markdown code blocks
+    or includes thinking tags (Qwen3  format).
 
     Args:
         text: Raw LLM output text.
@@ -115,6 +116,15 @@ def _extract_json(text: str, agent_name: str) -> dict[str, Any]:
         AgentError: If JSON parsing fails.
     """
     cleaned = text.strip()
+
+    # Strip Qwen3 thinking tags if present ( ...  think format)
+    if "/think" in cleaned or "<think>" in cleaned or ">" in cleaned:
+        # Remove thinking content between  thinking tags
+        import re
+        # Match  think ...  or <think>...</think> patterns
+        cleaned = re.sub(r"<think>.*?</think>", "", cleaned, flags=re.DOTALL)
+        cleaned = re.sub(r"/think.*?/", "", cleaned, flags=re.DOTALL)
+        cleaned = cleaned.strip()
 
     # Strip markdown code block wrappers if present
     if cleaned.startswith("```"):
