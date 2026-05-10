@@ -16,7 +16,6 @@ interface BusinessValueCardProps {
 /** Manual analyst benchmarks (industry average). */
 const MANUAL_TRIAGE_MINUTES = 45;
 const ANALYST_HOURLY_RATE = 75;
-const WORKING_HOURS_PER_YEAR = 2080;
 
 export function BusinessValueCard({
   totalInvestigations,
