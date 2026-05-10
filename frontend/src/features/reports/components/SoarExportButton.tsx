@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 import {
   Share2,
   ChevronDown,
@@ -118,6 +119,89 @@ export function SoarExportButton({ investigationId }: SoarExportButtonProps) {
     setTimeout(() => setCopied(false), 2000);
   };
 
+  // Modal Component to be Portaled
+  const Modal = (
+    <div
+      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-md transition-all animate-in fade-in duration-300"
+      onClick={() => setPreviewOpen(false)}
+    >
+      <div
+        className="mx-4 w-full max-w-2xl overflow-hidden rounded-2xl border border-white/10 bg-[#0a1628] shadow-[0_0_50px_rgba(168,85,247,0.3)] transition-all animate-in zoom-in-95 duration-300"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Modal header */}
+        <div className="relative flex items-center justify-between border-b border-white/10 bg-gradient-to-r from-purple-500/10 to-transparent px-6 py-5">
+          <div className="flex items-center gap-3">
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-purple-500/20 text-purple-400 shadow-lg shadow-purple-500/10 ring-1 ring-purple-500/30">
+              <Share2 size={24} />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-white tracking-tight">
+                {previewPlatform} Export
+              </h3>
+              <p className="text-xs text-gray-400">SOCsentinel Automation Payload</p>
+            </div>
+            <span className="ml-3 rounded-full border border-purple-500/40 bg-purple-500/20 px-2.5 py-0.5 text-[10px] font-bold text-purple-300 glow-purple uppercase">
+              Ready
+            </span>
+          </div>
+          <button
+            onClick={() => setPreviewOpen(false)}
+            className="group rounded-full bg-white/5 p-2 text-gray-400 transition-all hover:bg-white/10 hover:text-white"
+          >
+            <X size={20} className="transition-transform group-hover:rotate-90" />
+          </button>
+        </div>
+
+        {/* JSON preview */}
+        <div className="relative bg-[#020617] p-6">
+          <div className="absolute right-6 top-6 flex gap-2">
+            <span className="flex h-3 w-3 rounded-full bg-red-500/30" />
+            <span className="flex h-3 w-3 rounded-full bg-yellow-500/30" />
+            <span className="flex h-3 w-3 rounded-full bg-green-500/30" />
+          </div>
+          <div className="max-h-[450px] overflow-auto custom-scrollbar rounded-lg bg-black/40 p-4 ring-1 ring-white/5">
+            <pre className="whitespace-pre-wrap break-words font-mono text-[11px] leading-relaxed text-purple-200/90 selection:bg-purple-500/30">
+              {previewData}
+            </pre>
+          </div>
+        </div>
+
+        {/* Modal footer */}
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-white/10 bg-black/40 px-6 py-5">
+          <p className="text-[10px] text-gray-500 italic max-w-[280px] text-center sm:text-left">
+            * Use this blueprint to automate incident response in your SOAR playbook.
+          </p>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={handleCopy}
+              className={cn(
+                "flex items-center gap-2 rounded-xl px-5 py-2.5 text-xs font-bold transition-all active:scale-95",
+                copied 
+                  ? "bg-green-500/20 text-green-400 ring-1 ring-green-500/40" 
+                  : "bg-white/5 text-white hover:bg-white/10 ring-1 ring-white/10"
+              )}
+            >
+              {copied ? (
+                <CheckCircle2 size={16} />
+              ) : (
+                <Copy size={16} className="text-purple-400" />
+              )}
+              {copied ? "Copied to Clipboard!" : "Copy JSON Payload"}
+            </button>
+            <button
+              onClick={handleDownload}
+              className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-purple-500 to-indigo-600 px-5 py-2.5 text-xs font-bold text-white shadow-lg shadow-purple-500/20 transition-all hover:scale-[1.02] hover:shadow-purple-500/40 active:scale-95"
+            >
+              <Download size={16} />
+              Download .json
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
   return (
     <>
       {/* Dropdown trigger */}
@@ -178,84 +262,10 @@ export function SoarExportButton({ investigationId }: SoarExportButtonProps) {
         )}
       </div>
 
-      {/* JSON Preview Modal */}
-      {previewOpen && (
-        <div
-          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 backdrop-blur-md transition-all animate-in fade-in duration-300"
-          onClick={() => setPreviewOpen(false)}
-        >
-          <div
-            className="mx-4 w-full max-w-2xl overflow-hidden rounded-2xl border border-white/10 bg-[#0a1628] shadow-[0_0_50px_rgba(168,85,247,0.15)] transition-all animate-in zoom-in-95 duration-300"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Modal header */}
-            <div className="relative flex items-center justify-between border-b border-white/10 bg-gradient-to-r from-purple-500/5 to-transparent px-6 py-4">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-purple-500/20 text-purple-400 shadow-lg shadow-purple-500/10">
-                  <Share2 size={20} />
-                </div>
-                <div>
-                  <h3 className="text-base font-bold text-white">
-                    {previewPlatform}
-                  </h3>
-                  <p className="text-xs text-gray-400">SOCsentinel Automation Export</p>
-                </div>
-                <span className="ml-2 rounded-full border border-purple-500/30 bg-purple-500/10 px-2 py-0.5 text-[10px] font-bold text-purple-400 glow-purple">
-                  JSON
-                </span>
-              </div>
-              <button
-                onClick={() => setPreviewOpen(false)}
-                className="group rounded-full p-2 text-gray-400 transition-all hover:bg-white/10 hover:text-white"
-              >
-                <X size={20} className="transition-transform group-hover:rotate-90" />
-              </button>
-            </div>
-
-            {/* JSON preview */}
-            <div className="relative bg-[#020617]/50 p-6">
-              <div className="absolute right-4 top-4 flex gap-2">
-                <span className="flex h-3 w-3 rounded-full bg-red-500/20" />
-                <span className="flex h-3 w-3 rounded-full bg-yellow-500/20" />
-                <span className="flex h-3 w-3 rounded-full bg-green-500/20" />
-              </div>
-              <div className="max-h-[400px] overflow-auto custom-scrollbar">
-                <pre className="whitespace-pre-wrap break-words font-mono text-[11px] leading-relaxed text-purple-200/80">
-                  {previewData}
-                </pre>
-              </div>
-            </div>
-
-            {/* Modal footer */}
-            <div className="flex items-center justify-between border-t border-white/10 bg-black/20 px-6 py-4">
-              <p className="text-[10px] text-gray-500 italic">
-                * Import this JSON directly into your SOAR playbook as a structured incident artifact.
-              </p>
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={handleCopy}
-                  className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-xs font-semibold text-gray-300 transition-all hover:bg-white/10 hover:text-white active:scale-95"
-                >
-                  {copied ? (
-                    <CheckCircle2 size={16} className="text-green-400" />
-                  ) : (
-                    <Copy size={16} />
-                  )}
-                  {copied ? "Copied!" : "Copy Payload"}
-                </button>
-                <button
-                  onClick={handleDownload}
-                  className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-purple-500 to-indigo-600 px-4 py-2 text-xs font-bold text-white shadow-lg shadow-purple-500/20 transition-all hover:scale-[1.02] hover:shadow-purple-500/40 active:scale-95"
-                >
-                  <Download size={16} />
-                  Download File
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* JSON Preview Modal via Portal */}
+      {previewOpen && createPortal(Modal, document.body)}
     </>
   );
 }
+
 
