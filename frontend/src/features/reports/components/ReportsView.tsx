@@ -1,6 +1,4 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-/** SOCsentinel — Reports feature — Investigation Reports view. */
-
 import {
   FileText,
   Shield,
@@ -15,8 +13,11 @@ import {
   Download,
   Copy,
   Cpu,
+  X,
+  Share2,
 } from "lucide-react";
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import {
   getSeverityBadgeClass,
   formatRelativeTime,
@@ -41,7 +42,13 @@ function downloadAsFile(content: string, filename: string) {
   URL.revokeObjectURL(url);
 }
 
-function ReportCard({ investigation }: { investigation: Investigation }) {
+function ReportCard({ 
+  investigation, 
+  onSoarExport 
+}: { 
+  investigation: Investigation;
+  onSoarExport: (platform: string, data: string) => void;
+}) {
   const [expanded, setExpanded] = useState(false);
   const [copied, setCopied] = useState(false);
   const report = investigation.report_result;
@@ -91,7 +98,10 @@ function ReportCard({ investigation }: { investigation: Investigation }) {
         </div>
         <div className="relative flex items-center gap-2 self-end sm:self-start">
           <ExportButtons investigationId={investigation.investigation_id} />
-          <SoarExportButton investigationId={investigation.investigation_id} />
+          <SoarExportButton 
+            investigationId={investigation.investigation_id} 
+            onExportSuccess={onSoarExport}
+          />
           <button className="rounded-lg bg-white/5 p-2 text-gray-400 transition-colors hover:bg-white/10 hover:text-white">
             {expanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
           </button>
@@ -140,14 +150,6 @@ function ReportCard({ investigation }: { investigation: Investigation }) {
                     </p>
                   </div>
                 )}
-                {triage.false_positive_probability !== undefined && (
-                  <div className="rounded-lg bg-white/5 p-2.5">
-                    <p className="text-[10px] uppercase text-gray-500">FP Probability</p>
-                    <p className="text-sm font-semibold text-orange-400">
-                      {formatConfidence(triage.false_positive_probability)}
-                    </p>
-                  </div>
-                )}
               </div>
             </div>
           )}
@@ -174,16 +176,10 @@ function ReportCard({ investigation }: { investigation: Investigation }) {
                   </div>
                 ))}
               </div>
-              {mitre.kill_chain_phase && (
-                <p className="mt-2 text-xs text-gray-400">
-                  <strong className="text-gray-300">Kill Chain Phase:</strong>{" "}
-                  {mitre.kill_chain_phase}
-                </p>
-              )}
             </div>
           )}
 
-          {/* Detection Engineering — Sigma Rule (from Detection Agent) */}
+          {/* Detection Engineering — Sigma Rule */}
           {detection?.sigma_rule && (
             <div>
               <h4 className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-yellow-400">
@@ -219,56 +215,44 @@ function ReportCard({ investigation }: { investigation: Investigation }) {
                   {detection.sigma_rule}
                 </pre>
               </div>
+            </div>
+          )}
 
-              {/* Detection metadata grid */}
-              <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
-                {Array.isArray(detection.mitre_techniques_mapped) && detection.mitre_techniques_mapped.length > 0 && (
-                  <div className="rounded-lg bg-white/5 p-2.5">
-                    <p className="text-[10px] uppercase text-gray-500">Techniques</p>
-                    <p className="text-xs font-semibold text-red-400">
-                      {detection.mitre_techniques_mapped.join(", ")}
-                    </p>
-                  </div>
-                )}
-                {detection.false_positive_risk && (
-                  <div className="rounded-lg bg-white/5 p-2.5">
-                    <p className="text-[10px] uppercase text-gray-500">FP Risk</p>
-                    <p className={cn(
-                      "text-xs font-semibold",
-                      detection.false_positive_risk === "high" ? "text-red-400" :
-                      detection.false_positive_risk === "medium" ? "text-orange-400" : "text-green-400"
-                    )}>
-                      {detection.false_positive_risk}
-                    </p>
-                  </div>
-                )}
-                {detection.confidence !== undefined && (
-                  <div className="rounded-lg bg-white/5 p-2.5">
-                    <p className="text-[10px] uppercase text-gray-500">Confidence</p>
-                    <p className="text-xs font-semibold text-cyan-400">
-                      {typeof detection.confidence === "number"
-                        ? `${(detection.confidence * 100).toFixed(0)}%`
-                        : detection.confidence}
-                    </p>
-                  </div>
-                )}
-                {Array.isArray(detection.recommended_log_sources) && detection.recommended_log_sources.length > 0 && (
-                  <div className="rounded-lg bg-white/5 p-2.5">
-                    <p className="text-[10px] uppercase text-gray-500">Log Sources</p>
-                    <p className="text-xs font-semibold text-gray-300">
-                      {detection.recommended_log_sources.join(", ")}
-                    </p>
-                  </div>
-                )}
+          {/* Response Playbook */}
+          {response && response.steps && response.steps.length > 0 && (
+            <div>
+              <h4 className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-emerald-400">
+                <Zap size={14} /> Containment Playbook
+              </h4>
+              <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/5 p-3">
+                <div className="mb-3 flex items-center justify-between">
+                  <span className="text-sm font-semibold text-emerald-400">
+                    {response.playbook_name || "Response Playbook"}
+                  </span>
+                  <span className="rounded bg-emerald-500/20 px-2 py-0.5 text-[10px] font-medium uppercase text-emerald-400">
+                    {response.priority || "Standard"} Priority
+                  </span>
+                </div>
+                
+                <div className="space-y-2">
+                  {Array.isArray(response.steps) && response.steps.map((step: any, i: number) => (
+                    <div key={i} className="flex gap-3 rounded-md bg-white/5 p-2">
+                      <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-500/20 text-[10px] font-bold text-emerald-400">
+                        {step.order || i + 1}
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-white">{step.action}</p>
+                        <div className="mt-1 flex flex-wrap items-center gap-2 text-[10px] text-gray-400">
+                          <span className="font-mono bg-white/10 px-1 rounded">{step.tool}</span>
+                          <span className={step.risk_level === "high" ? "text-red-400" : step.risk_level === "medium" ? "text-orange-400" : "text-green-400"}>
+                            Risk: {step.risk_level}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
-
-              {/* Detection logic explanation */}
-              {detection.detection_logic && (
-                <p className="mt-2 rounded-lg bg-white/5 p-3 text-xs leading-relaxed text-gray-300">
-                  <strong className="text-gray-200">Detection Logic:</strong>{" "}
-                  {detection.detection_logic}
-                </p>
-              )}
             </div>
           )}
 
@@ -304,45 +288,6 @@ function ReportCard({ investigation }: { investigation: Investigation }) {
                   </li>
                 ))}
               </ul>
-            </div>
-          )}
-
-          {/* Response Playbook */}
-          {response && response.steps && response.steps.length > 0 && (
-            <div>
-              <h4 className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-emerald-400">
-                <Zap size={14} /> Containment Playbook
-              </h4>
-              <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/5 p-3">
-                <div className="mb-3 flex items-center justify-between">
-                  <span className="text-sm font-semibold text-emerald-400">
-                    {response.playbook_name || "Response Playbook"}
-                  </span>
-                  <span className="rounded bg-emerald-500/20 px-2 py-0.5 text-[10px] font-medium uppercase text-emerald-400">
-                    {response.priority || "Standard"} Priority
-                  </span>
-                </div>
-                
-                <div className="space-y-2">
-                  {Array.isArray(response.steps) && response.steps.map((step: any, i: number) => (
-                    <div key={i} className="flex gap-3 rounded-md bg-white/5 p-2">
-                      <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-500/20 text-[10px] font-bold text-emerald-400">
-                        {step.order || i + 1}
-                      </div>
-                      <div className="flex-1">
-                        <p className="text-sm font-medium text-white">{step.action}</p>
-                        <div className="mt-1 flex flex-wrap items-center gap-2 text-[10px] text-gray-400">
-                          <span className="font-mono bg-white/10 px-1 rounded">{step.tool}</span>
-                          <span className={step.risk_level === "high" ? "text-red-400" : step.risk_level === "medium" ? "text-orange-400" : "text-green-400"}>
-                            Risk: {step.risk_level}
-                          </span>
-                          {step.automated && <span className="text-cyan-400">Automated</span>}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
             </div>
           )}
 
@@ -416,6 +361,20 @@ function ReportCard({ investigation }: { investigation: Investigation }) {
 
 export function ReportsView() {
   const { data: investigations, isLoading } = useInvestigationsFull();
+  
+  // Modal State
+  const [soarModal, setSoarModal] = useState<{ open: boolean; platform: string; data: string }>({
+    open: false,
+    platform: "",
+    data: "",
+  });
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(soarModal.data);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   return (
     <div className="space-y-6">
@@ -443,10 +402,64 @@ export function ReportsView() {
           </div>
         ) : (
           investigations.map((inv) => (
-            <ReportCard key={inv.investigation_id} investigation={inv} />
+            <ReportCard 
+              key={inv.investigation_id} 
+              investigation={inv} 
+              onSoarExport={(platform, data) => setSoarModal({ open: true, platform, data })}
+            />
           ))
         )}
       </div>
+
+      {/* Global SOAR Modal - Rendered outside all cards */}
+      {soarModal.open && createPortal(
+        <div 
+          className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/90 backdrop-blur-md p-4 animate-in fade-in duration-300"
+          onClick={() => setSoarModal({ ...soarModal, open: false })}
+        >
+          <div 
+            className="w-full max-w-2xl overflow-hidden rounded-2xl border border-white/10 bg-[#0a1628] shadow-[0_0_50px_rgba(168,85,247,0.3)]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-white/10 bg-purple-500/10 px-6 py-5">
+              <div className="flex items-center gap-3">
+                <Share2 size={24} className="text-purple-400" />
+                <div>
+                  <h3 className="text-lg font-bold text-white">{soarModal.platform} Export</h3>
+                  <p className="text-xs text-gray-400">SOCsentinel Automation Payload</p>
+                </div>
+              </div>
+              <button onClick={() => setSoarModal({ ...soarModal, open: false })} className="text-gray-400 hover:text-white transition-colors">
+                <X size={24} />
+              </button>
+            </div>
+            <div className="bg-[#020617] p-6">
+              <div className="max-h-[400px] overflow-auto custom-scrollbar rounded-lg bg-black/40 p-4 font-mono text-[11px] text-purple-200 ring-1 ring-white/5">
+                <pre className="whitespace-pre-wrap break-all">{soarModal.data}</pre>
+              </div>
+            </div>
+            <div className="flex items-center justify-end gap-3 border-t border-white/10 bg-black/40 px-6 py-4">
+              <button
+                onClick={handleCopy}
+                className={cn(
+                  "flex items-center gap-2 rounded-xl px-5 py-2 text-xs font-bold transition-all active:scale-95",
+                  copied ? "bg-green-500/20 text-green-400 ring-1 ring-green-500/30" : "bg-white/5 text-white hover:bg-white/10 ring-1 ring-white/10"
+                )}
+              >
+                {copied ? <CheckCircle2 size={16} /> : <Copy size={16} />}
+                {copied ? "Copied Payload!" : "Copy JSON"}
+              </button>
+              <button
+                onClick={() => setSoarModal({ ...soarModal, open: false })}
+                className="rounded-xl bg-purple-600 px-6 py-2 text-xs font-bold text-white hover:bg-purple-700 transition-all active:scale-95"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
     </div>
   );
 }
