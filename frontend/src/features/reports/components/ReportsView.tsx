@@ -81,7 +81,7 @@ function ReportCard({
           <h3 className="text-sm font-semibold text-white">
             {report?.title || investigation.alert?.rule_name || "Investigation Report"}
           </h3>
-          <p className="line-clamp-2 text-xs leading-relaxed text-gray-400">
+          <p className="line-clamp-2 text-xs leading-relaxed text-gray-400 break-all overflow-hidden">
             {report?.executive_summary || "Report pending..."}
           </p>
           <div className="flex items-center gap-3 text-xs text-gray-500">
