@@ -102,9 +102,9 @@ export function MitreHeatmap() {
       </div>
 
       <div className="flex-1 overflow-x-auto p-3 sm:p-4 custom-scrollbar">
-        <div className="flex gap-2" style={{ minWidth: "max-content" }}>
+        <div className="flex gap-1.5 sm:gap-2" style={{ minWidth: "max-content" }}>
           {orderedTactics.map((tactic, i) => (
-            <div key={i} className="flex w-32 flex-col gap-2">
+            <div key={i} className="flex w-24 sm:w-32 flex-col gap-2">
               {/* Column Header */}
               <div className="flex h-12 flex-col justify-end border-b border-white/10 pb-2">
                 <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400 line-clamp-2 leading-tight">
@@ -125,7 +125,7 @@ export function MitreHeatmap() {
                       <div
                         key={j}
                         className={cn(
-                          "relative group flex h-14 w-full cursor-help flex-col items-center justify-center rounded border transition-all hover:scale-105",
+                          "relative group flex h-12 sm:h-14 w-full cursor-help flex-col items-center justify-center rounded border transition-all hover:scale-105",
                           getColorClass(tech.count)
                         )}
                       >
@@ -142,7 +142,7 @@ export function MitreHeatmap() {
                     ))
                 ) : (
                   // Empty state placeholder cell for aesthetics
-                  <div className="flex h-14 w-full items-center justify-center rounded border border-white/5 bg-navy-900/20 border-dashed">
+                  <div className="flex h-12 sm:h-14 w-full items-center justify-center rounded border border-white/5 bg-navy-900/20 border-dashed">
                     <span className="text-[10px] text-gray-600">—</span>
                   </div>
                 )}

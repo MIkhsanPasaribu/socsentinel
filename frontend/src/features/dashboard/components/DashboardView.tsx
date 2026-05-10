@@ -65,7 +65,7 @@ function StatCard({
           {isLoading ? (
             <div className="mt-2 h-9 w-20 animate-pulse rounded bg-white/10" />
           ) : (
-            <p className="mt-2 text-2xl sm:text-3xl font-bold text-white">{value}</p>
+            <p className="mt-2 text-xl xs:text-2xl sm:text-3xl font-bold text-white leading-none tracking-tight">{value}</p>
           )}
           <p className="mt-1 text-xs text-gray-500">{subtitle}</p>
         </div>
@@ -209,8 +209,8 @@ export function DashboardView() {
         </p>
       </div>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      {/* Metrics Grid */}
+      <div className="grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-4 xl:gap-4">
         <StatCard
           title="Total Investigations"
           value={stats?.total_investigations ?? 0}
@@ -277,7 +277,7 @@ export function DashboardView() {
             ROCm 6.x
           </span>
         </div>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <div className="grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-4">
           <div className="rounded-lg bg-white/5 p-3 text-center">
             <p className="text-[10px] uppercase tracking-wider text-gray-500">Avg Inference</p>
             <p className="mt-1 text-xl sm:text-2xl font-bold text-cyan-400">

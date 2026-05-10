@@ -46,8 +46,8 @@ export function BusinessValueCard({
       </div>
 
       {/* Before vs After Comparison */}
-      <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
-        <div className="rounded-lg bg-red-500/10 border border-red-500/20 p-3 text-center">
+      <div className="mb-4 grid grid-cols-1 gap-3 xs:grid-cols-2 sm:grid-cols-3">
+        <div className="rounded-lg bg-red-500/10 border border-red-500/20 p-3 text-center transition-all hover:bg-red-500/15">
           <p className="text-[10px] uppercase tracking-wider text-red-400">Manual Analyst</p>
           <p className="mt-1 text-2xl font-bold text-red-400">45 min</p>
           <p className="text-[10px] text-gray-500">per alert triage</p>
@@ -65,7 +65,7 @@ export function BusinessValueCard({
       </div>
 
       {/* Metrics Grid */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-4">
         <div className="rounded-lg bg-white/5 p-3">
           <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-gray-500">
             <BarChart3 size={10} />
