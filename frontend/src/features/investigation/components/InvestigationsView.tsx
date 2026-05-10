@@ -216,7 +216,7 @@ export function InvestigationsView() {
               }
               reset();
               setTimeout(
-                () => startInvestigation(selectedScenario, false),
+                () => startInvestigation(selectedScenario, true),
                 100,
               );
             }}

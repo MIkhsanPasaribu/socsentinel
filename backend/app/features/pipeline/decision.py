@@ -14,7 +14,7 @@ from pydantic import BaseModel, Field, model_validator
 from app.core.logger import get_logger
 from app.shared.schemas import APIResponse, InvestigationStatus
 from app.shared.exceptions.base import NotFoundError
-from app.features.pipeline.service import _pipeline_store
+from app.features.pipeline.service import _pipeline_store, get_investigation
 from app.features.pipeline.feedback import record_feedback, get_relevant_feedback, get_feedback_stats
 
 logger = get_logger(__name__)
@@ -53,9 +53,12 @@ async def record_decision(investigation_id: str, req: DecisionRequest) -> APIRes
         investigation_id: The investigation to decide on.
         req: Decision payload with type and optional notes.
     """
-    state = _pipeline_store.get(investigation_id)
+    state = get_investigation(investigation_id)
     if not state:
         raise NotFoundError("Investigation", investigation_id)
+
+    # Ensure state is in memory store for persistence
+    _pipeline_store[investigation_id] = state
 
     # Record decision
     decision_record = {
@@ -141,7 +144,7 @@ async def get_risk_summary(investigation_id: str) -> APIResponse:
     including severity, confidence, kill chain position, IOC count,
     MITRE technique count, and recommended action.
     """
-    state = _pipeline_store.get(investigation_id)
+    state = get_investigation(investigation_id)
     if not state:
         raise NotFoundError("Investigation", investigation_id)
 

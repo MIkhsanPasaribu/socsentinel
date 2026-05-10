@@ -99,6 +99,14 @@ const INITIAL_AGENTS: AgentStep[] = [
   },
   {
     index: 4,
+    name: "Threat Generator",
+    role: "Threat Intelligence Analyst",
+    model: "Qwen3-7B",
+    step: "threat_generator",
+    status: "pending",
+  },
+  {
+    index: 5,
     name: "Detection Agent",
     role: "Detection Engineer",
     model: "Qwen3-7B",
@@ -106,7 +114,7 @@ const INITIAL_AGENTS: AgentStep[] = [
     status: "pending",
   },
   {
-    index: 5,
+    index: 6,
     name: "Report Writer",
     role: "Senior Analyst",
     model: "Qwen3-14B",
@@ -114,7 +122,7 @@ const INITIAL_AGENTS: AgentStep[] = [
     status: "pending",
   },
   {
-    index: 6,
+    index: 7,
     name: "Response Planner",
     role: "L3 Incident Responder",
     model: "Qwen3-14B",
@@ -122,7 +130,7 @@ const INITIAL_AGENTS: AgentStep[] = [
     status: "pending",
   },
   {
-    index: 7,
+    index: 8,
     name: "Adversarial Validator",
     role: "Red Teamer / Critic",
     model: "Qwen3-7B",
@@ -178,25 +186,6 @@ export function useSSEInvestigation(apiUrl: string) {
 
       es.addEventListener("pipeline_started", (e) => {
         const data: SSEPipelineEvent = JSON.parse(e.data);
-        const totalAgents = data.total_agents || INITIAL_AGENTS.length;
-        const agents =
-          totalAgents === INITIAL_AGENTS.length
-            ? INITIAL_AGENTS
-            : [
-                ...INITIAL_AGENTS.slice(0, 4),
-                {
-                  index: 4,
-                  name: "Threat Generator",
-                  role: "Threat Intelligence Analyst",
-                  model: "Qwen3-7B",
-                  step: "threat_generator",
-                  status: "pending" as const,
-                },
-                ...INITIAL_AGENTS.slice(4).map((agent, idx) => ({
-                  ...agent,
-                  index: idx + 5,
-                })),
-              ];
 
         setState((prev) => ({
           ...prev,
@@ -205,7 +194,7 @@ export function useSSEInvestigation(apiUrl: string) {
           alertId: data.alert_id || null,
           severity: data.severity || null,
           ruleName: data.rule_name || null,
-          agents: agents.map((agent) => ({ ...agent })),
+          agents: INITIAL_AGENTS.map((agent) => ({ ...agent })),
           thinkingMode: !!data.thinking_mode,
         }));
       });

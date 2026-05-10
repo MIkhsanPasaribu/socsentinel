@@ -161,7 +161,7 @@ async def _stream_investigation(
         "alert_id": alert.alert_id,
         "severity": alert.severity.value,
         "rule_name": alert.rule_name,
-        "total_agents": 9 if include_threat_scenario else 8,
+        "total_agents": 9,
         "thinking_mode": thinking_mode,
     })
 
@@ -216,15 +216,14 @@ async def _stream_investigation(
         },
     ]
 
-    if include_threat_scenario:
-        agents.append({
-            "step": "threat_generator",
-            "name": "Threat Generator",
-            "role": "Threat Intelligence Analyst",
-            "model": "Qwen3-7B",
-            "fn": _run_threat_scenario,
-            "status": InvestigationStatus.GENERATING_THREAT_SCENARIO,
-        })
+    agents.append({
+        "step": "threat_generator",
+        "name": "Threat Generator",
+        "role": "Threat Intelligence Analyst",
+        "model": "Qwen3-7B",
+        "fn": _run_threat_scenario,
+        "status": InvestigationStatus.GENERATING_THREAT_SCENARIO,
+    })
 
     agents.extend([
         {

@@ -193,32 +193,33 @@ async def run_investigation(
         state.mitre_result = mitre_result
         _add_audit_entry(state, "mitre_mapper", mitre_result)
 
-        # Step 4.2: Threat Scenario Generation (optional)
-        if include_threat_scenario:
-            state.status = InvestigationStatus.GENERATING_THREAT_SCENARIO
-            selected_technique = select_threat_technique_id(
-                mitre_result,
-                threat_technique_id,
+        # Step 4.2: Threat Scenario Generation (always enabled — 9th agent)
+        state.status = InvestigationStatus.GENERATING_THREAT_SCENARIO
+        selected_technique = select_threat_technique_id(
+            mitre_result,
+            threat_technique_id,
+        )
+        if selected_technique:
+            threat_result = await generate_threat_scenario(
+                technique_id=selected_technique,
+                apt_group="generic",
+                additional_context={
+                    "source": "pipeline",
+                    "alert_id": alert.alert_id,
+                },
             )
-            if selected_technique:
-                threat_result = await generate_threat_scenario(
-                    technique_id=selected_technique,
-                    apt_group="generic",
-                    additional_context={
-                        "source": "pipeline",
-                        "alert_id": alert.alert_id,
-                    },
-                )
-                state.threat_scenario = threat_result
-                _add_audit_entry(state, "threat_generator", threat_result)
-            else:
-                _add_audit_entry(
-                    state,
-                    "threat_generator",
-                    {"_agent": "Threat Generator", "confidence": None},
-                    status="skipped",
-                    extra={"reason": "no_technique_available"},
-                )
+            state.threat_scenario = threat_result
+            _add_audit_entry(state, "threat_generator", threat_result)
+        else:
+            threat_result = {"_agent": "Threat Generator", "confidence": None, "skipped": True}
+            state.threat_scenario = threat_result
+            _add_audit_entry(
+                state,
+                "threat_generator",
+                threat_result,
+                status="completed",
+                extra={"reason": "no_technique_available"},
+            )
 
         # Step 4.5: Detection Rule Generation
         state.status = InvestigationStatus.GENERATING_DETECTION

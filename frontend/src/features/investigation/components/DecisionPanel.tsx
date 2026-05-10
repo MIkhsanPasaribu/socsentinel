@@ -19,6 +19,7 @@ import { ConfidenceGauge } from "../../../shared/components/ConfidenceGauge";
 import { useFormValidation } from "../../../shared/hooks/useFormValidation";
 import { decisionSchema } from "../../../shared/lib/validation";
 import { cn, getSeverityBadgeClass } from "../../../shared/lib/utils";
+import { useToast } from "../../../shared/components/Toast";
 import type { APIResponse } from "../../../shared/types";
 
 type Decision = "approve" | "escalate" | "reject";
@@ -78,6 +79,7 @@ export function DecisionPanel({
   const [showOverride, setShowOverride] = useState(false);
   const { errors, validate, clearErrors } = useFormValidation(decisionSchema);
   const queryClient = useQueryClient();
+  const { addToast } = useToast();
 
   const { data: riskSummary, isLoading: riskLoading } = useQuery<RiskSummary>({
     queryKey: ["risk-summary", investigationId],
@@ -98,7 +100,7 @@ export function DecisionPanel({
     mutationFn: (decision: Decision) =>
       apiClient.post<APIResponse>(`/pipeline/decision/${investigationId}`, {
         decision,
-        analyst_notes: notes,
+        analyst_notes: notes.trim(),
         confidence_override: confidenceOverride,
         severity_override: null,
       }),
@@ -107,7 +109,14 @@ export function DecisionPanel({
       clearErrors();
       queryClient.invalidateQueries({ queryKey: ["investigations"] });
       queryClient.invalidateQueries({ queryKey: ["pipeline-stats"] });
+      addToast({ type: "success", title: "Decision Recorded", message: `Decision '${decision}' saved for ${investigationId}` });
       onDecisionMade?.(decision);
+    },
+    onError: (error: unknown) => {
+      const msg = (error as { response?: { data?: { message?: string } } })?.response?.data?.message
+        || (error as Error)?.message
+        || "Failed to record decision";
+      addToast({ type: "error", title: "Decision Failed", message: msg });
     },
   });
 
@@ -117,7 +126,10 @@ export function DecisionPanel({
       notes: notes.trim() || undefined,
       confidence_override: confidenceOverride,
     };
-    if (!validate(payload)) return;
+    if (!validate(payload)) {
+      addToast({ type: "error", title: "Validation Error", message: decision === "approve" ? "Please check your input" : "Notes are required for escalation or rejection" });
+      return;
+    }
     decisionMutation.mutate(decision);
   };
 
