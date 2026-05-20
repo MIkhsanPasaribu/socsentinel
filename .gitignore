@@ -37,6 +37,14 @@ data/mitre_attack/enterprise-attack.json
 data/chroma_db/
 data/test_chroma_db/
 
+# === Docs & GitHub (local only) ===
+docs/
+.github/
+DEPLOY_HUGGINGFACE.md
+DEPLOY_VPS.md
+hackathoninfo.md
+socsentinel.md
+
 # === Misc ===
 *.bak
 *.tmp
